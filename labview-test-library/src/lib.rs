@@ -1,4 +1,4 @@
-use labview_interop::timestamp::LVTime;
+use labview_interop::types::LVTime;
 
 #[no_mangle]
 pub extern "C" fn timestamp_to_epoch(timestamp: *const LVTime) -> f64 {

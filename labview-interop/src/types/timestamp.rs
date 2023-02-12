@@ -2,6 +2,7 @@
 //!
 //! This includes binary formats, to and from 1904 epoch, unix (1970) epoch
 //! and optionally chrono DateTime with the `chrono` feature.
+//!
 
 use thiserror::Error;
 
@@ -173,9 +174,8 @@ mod tests {
 #[cfg(test)]
 #[cfg(feature = "chrono")]
 mod chrono_tests {
-    use crate::timestamp::UNIX_EPOCH_IN_LV_SECONDS;
 
-    use super::LVTime;
+    use super::{LVTime, UNIX_EPOCH_IN_LV_SECONDS};
     use chrono::NaiveDateTime;
     use chrono::{DateTime, Utc};
 
