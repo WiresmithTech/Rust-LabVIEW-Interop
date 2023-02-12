@@ -11,6 +11,7 @@
 		<Property Name="server.vi.callsEnabled" Type="Bool">true</Property>
 		<Property Name="server.vi.propertiesEnabled" Type="Bool">true</Property>
 		<Property Name="specify.custom.address" Type="Bool">false</Property>
+		<Item Name="Data Structure Tests.lvclass" Type="LVClass" URL="../Data Structure Tests/Data Structure Tests.lvclass"/>
 		<Item Name="Timestamp Tests.lvclass" Type="LVClass" URL="../Timestamp Tests/Timestamp Tests.lvclass"/>
 		<Item Name="Dependencies" Type="Dependencies">
 			<Item Name="vi.lib" Type="Folder">
@@ -301,7 +302,7 @@
 				<Item Name="VITesterUtilities.lvlib" Type="Library" URL="/&lt;vilib&gt;/addons/_JKI Toolkits/VI Tester/_support/VITesterUtilities.lvlib"/>
 				<Item Name="Waveform Subtype Enum__ogtk__jki_vi_tester.ctl" Type="VI" URL="/&lt;vilib&gt;/addons/_JKI Toolkits/VI Tester/_support/Support.llb/Waveform Subtype Enum__ogtk__jki_vi_tester.ctl"/>
 			</Item>
-			<Item Name="labview_test_library.dll" Type="Document" URL="../../target/release/labview_test_library.dll"/>
+			<Item Name="labview_test_library.dll" Type="Document" URL="../../target/debug/labview_test_library.dll"/>
 		</Item>
 		<Item Name="Build Specifications" Type="Build"/>
 	</Item>

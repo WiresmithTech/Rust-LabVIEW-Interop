@@ -25,13 +25,6 @@ macro_rules! labview_layout {
     };
 }
 
-labview_layout!(
-    struct Test {
-        one: u8,
-        two: u16,
-    }
-);
-
 /// Represents a LabVIEW Variant. The internal structure is undefined
 /// by NI and therefore unavailable.
 ///
@@ -39,11 +32,14 @@ labview_layout!(
 #[repr(transparent)]
 pub struct LVVariant(UHandle<c_void>);
 
+//todo: why the padding? not needed in normal cluster.
 labview_layout!(
     pub struct Waveform<T> {
-        t0: timestamp::LVTime,
-        dt: f64,
-        data: LVArray<1, T>,
-        attributes: LVVariant,
+        pub t0: timestamp::LVTime,
+        pub dt: f64,
+        pub data: LVArrayHandle<1, T>,
+        _pad: u64,
+        pub attributes: LVVariant,
+        _pad2: u64,
     }
 );

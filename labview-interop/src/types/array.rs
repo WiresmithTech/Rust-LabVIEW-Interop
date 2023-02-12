@@ -10,7 +10,7 @@ use crate::memory::UHandle;
 #[repr(C)]
 pub struct LVArray<const D: usize, T> {
     dim_sizes: [i32; D],
-    data: *mut T,
+    data: T,
 }
 
 impl<const D: usize, T> LVArray<D, T> {
@@ -29,7 +29,7 @@ impl<const D: usize, T> LVArray<D, T> {
     pub fn data_as_slice(&self) -> &[T] {
         let size = self.get_data_size();
         // Safety: Dimensions are set by LabVIEW to be valid.
-        unsafe { std::slice::from_raw_parts(self.data, size) }
+        unsafe { std::slice::from_raw_parts(&self.data, size) }
     }
 
     /// Get the data component as a muteable slice.
@@ -41,7 +41,7 @@ impl<const D: usize, T> LVArray<D, T> {
     pub fn data_as_slice_mut(&mut self) -> &mut [T] {
         let size = self.get_data_size();
         // Safety: Dimensions are set by LabVIEW to be valid.
-        unsafe { std::slice::from_raw_parts_mut(self.data, size) }
+        unsafe { std::slice::from_raw_parts_mut(&mut self.data, size) }
     }
 }
 
