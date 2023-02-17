@@ -1,21 +1,57 @@
 //! The arrays module covers LabVIEW multidimensional array.
 //!
-//!
+//! todo: empty array can be an null handle. Detect and use.
 
+use crate::labview_layout;
 use crate::memory::UHandle;
 
-/// Internal LabVIEW array representation.
+labview_layout!(
+    /// Internal LabVIEW array representation.
+    ///
+    /// todo: does this follow cluster packing rules? yes but lots breaks.
+    pub struct LVArray<const D: usize, T> {
+        dim_sizes: [i32; D],
+        data: T,
+    }
+);
+
+///implement a basic, unsafe API that works for packed usage on 32 bit targets.
 ///
-/// todo: does this follow cluster packing rules?
-#[repr(C)]
-pub struct LVArray<const D: usize, T> {
-    dim_sizes: [i32; D],
-    data: T,
+/// It is copy only as we must copy out of the pointers.
+impl<const D: usize, T: Copy> LVArray<D, T> {
+    /// Get the data size. Works with the packed structures found in the 32 bit interface.
+    pub fn get_data_size(&self) -> usize {
+        let mut size: usize = 1;
+
+        for index in 0..D {
+            let element_ptr = std::ptr::addr_of!(self.dim_sizes[index]);
+            // Safety: the indexes must be in range due to the const generic value.
+            let dim_size = unsafe { std::ptr::read_unaligned(element_ptr) };
+            size *= dim_size as usize;
+        }
+
+        size
+    }
+
+    /// Get the value directly from the array. This is an unsafe method used on
+    /// 32 bit targets where the packed structure means we cannot access a slice.
+    ///
+    /// On 64 bit targets use [`LVArray::data_as_slice`] instead.
+    ///
+    /// # Safety
+    ///
+    /// If the index is out of the range then it is undefined behaviour.
+    pub unsafe fn get_value_unchecked(&self, index: usize) -> T {
+        let data_ptr = std::ptr::addr_of!(self.data);
+        let element_ptr = data_ptr.offset(index as isize);
+        std::ptr::read_unaligned(element_ptr)
+    }
 }
 
+#[cfg(target_pointer_width = "64")]
 impl<const D: usize, T> LVArray<D, T> {
     /// Get the total number of elements in the array across all dimensions.
-    pub fn get_data_size(&self) -> usize {
+    pub fn element_count(&self) -> usize {
         let size = self.dim_sizes.iter().fold(1, |size, dim| size * dim);
         size as usize
     }
@@ -27,7 +63,7 @@ impl<const D: usize, T> LVArray<D, T> {
     ///
     /// For 1D arrays this can just be used as the data contents.
     pub fn data_as_slice(&self) -> &[T] {
-        let size = self.get_data_size();
+        let size = self.element_count();
         // Safety: Dimensions are set by LabVIEW to be valid.
         unsafe { std::slice::from_raw_parts(&self.data, size) }
     }
@@ -39,7 +75,7 @@ impl<const D: usize, T> LVArray<D, T> {
     ///
     /// For 1D arrays this can just be used as the data contents.
     pub fn data_as_slice_mut(&mut self) -> &mut [T] {
-        let size = self.get_data_size();
+        let size = self.element_count();
         // Safety: Dimensions are set by LabVIEW to be valid.
         unsafe { std::slice::from_raw_parts_mut(&mut self.data, size) }
     }

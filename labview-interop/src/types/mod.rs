@@ -38,8 +38,14 @@ labview_layout!(
         pub t0: timestamp::LVTime,
         pub dt: f64,
         pub data: LVArrayHandle<1, T>,
+        #[cfg(target_pointer_width = "64")]
+        _pad: u64,
+        #[cfg(target_pointer_width = "32")]
         _pad: u64,
         pub attributes: LVVariant,
+        #[cfg(target_pointer_width = "64")]
+        _pad2: u64,
+        #[cfg(target_pointer_width = "32")]
         _pad2: u64,
     }
 );

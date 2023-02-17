@@ -1,0 +1,35 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'labview-interop'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=labview-interop"
+                ],
+                "filter": {
+                    "name": "labview-interop",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "attach",
+            "name": "debug test lib 32 bit",
+            "program": "C:\\Program Files (x86)\\National Instruments\\LabVIEW 2020\\LabVIEW.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
