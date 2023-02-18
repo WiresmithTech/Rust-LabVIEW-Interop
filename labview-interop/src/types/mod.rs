@@ -32,8 +32,18 @@ macro_rules! labview_layout {
 #[repr(transparent)]
 pub struct LVVariant(UHandle<c_void>);
 
-//todo: why the padding? not needed in normal cluster.
 labview_layout!(
+    /// Represents the LabVIEW waveform type where:
+    ///
+    /// * t0: The start time of the data.
+    /// * dt: The time delte between samples.
+    /// * data: A 1d array of type <T>
+    /// * attributes: Variant attributes but these are inaccessible to rust.
+    ///
+    /// ## Padding
+    ///
+    /// The padding scheme here is wierd and unexpected and has been reverse engineered
+    /// based on real calls. No idea why the padding exists whether it is documented anywhere.
     pub struct Waveform<T> {
         pub t0: timestamp::LVTime,
         pub dt: f64,
@@ -41,11 +51,13 @@ labview_layout!(
         #[cfg(target_pointer_width = "64")]
         _pad: u64,
         #[cfg(target_pointer_width = "32")]
-        _pad: u64,
+        _pad: u32,
+        #[cfg(target_pointer_width = "32")]
+        _mini_pad: u8,
         pub attributes: LVVariant,
         #[cfg(target_pointer_width = "64")]
         _pad2: u64,
         #[cfg(target_pointer_width = "32")]
-        _pad2: u64,
+        _pad2: u32,
     }
 );
