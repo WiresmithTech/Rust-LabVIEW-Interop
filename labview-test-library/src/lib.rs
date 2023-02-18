@@ -153,3 +153,28 @@ pub extern "C" fn extract_cluster_variant(
         *two = (*input).two;
     }
 }
+
+pub fn test() {
+    use std::ptr::{addr_of, read_unaligned};
+    labview_layout!(
+        pub struct TestStruct {
+            one: u8,
+            two: u16,
+            three: u32,
+        }
+    );
+
+    let value = TestStruct {
+        one: 1,
+        two: 2,
+        three: 3,
+    };
+
+    // Not allowed.
+    let three_ref = &value.three;
+
+    unsafe {
+        let three_ptr: *const u32 = addr_of!(value.three);
+        let three: u32 = read_unaligned(three_ptr);
+    }
+}
