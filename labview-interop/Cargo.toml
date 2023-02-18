@@ -6,7 +6,8 @@ license = "MIT"
 homepage = "https://github.com/WiresmithTech/Rust-LabVIEW-Interop"
 repository = "https://github.com/WiresmithTech/Rust-LabVIEW-Interop"
 description = "Types and wrappers for interperating with LabVIEW when called as a library"
-tags = ["labview", "ni"]
+keywords = ["labview", "ni"]
+readme = "..\\README.md"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
