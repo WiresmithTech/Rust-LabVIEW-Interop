@@ -2,6 +2,8 @@
 
 A crate to make it easy to work between Rust and LabVIEW.
 
+This is under active development and should be considered unstable.
+
 This will slowly evolve as features are added. Right now I'm creating it for timestamp types but it should evolve to include:
 
 * LabVIEW Handle management.
