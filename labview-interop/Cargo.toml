@@ -15,6 +15,7 @@ readme = "..\\README.md"
 [dependencies]
 thiserror = "1"
 chrono = { version = "~0.4.23", optional = true }
+libloading = "0.8"
 
 
 [features]

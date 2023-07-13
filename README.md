@@ -16,6 +16,24 @@ This will slowly evolve as features are added. Right now I'm creating it for tim
 
 The goal is that there will be a module and feature for each of these areas.
 
+## Linking to LabVIEW
+
+This is under-review but right now it requires to to provide a link path to LabVIEW in the project using it. e.g. the following build.rs
+
+```
+fn main() {
+    println!(
+        "cargo:rustc-link-search=C:\\Program Files\\National Instruments\\LabVIEW 2020\\cintools"
+    );
+    println!("cargo:rustc-link-lib=labviewv")
+}
+```
+
+There are open questions about this:
+
+1. Can this be done in a cross-version compatible way (within reason) - perhaps by dynamically loading?
+2. Is this still required if you don't use functions that call to these? We should probably put these features behind feature flags.
+
 
 ## Support
 

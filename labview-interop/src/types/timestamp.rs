@@ -1,4 +1,4 @@
-//! Support for exchanging passwords with LabVIEWs timestamp format.
+//! Support for exchanging date and times. with LabVIEWs timestamp format.
 //!
 //! This includes binary formats, to and from 1904 epoch, unix (1970) epoch
 //! and optionally chrono DateTime with the `chrono` feature.
@@ -20,9 +20,6 @@ pub struct LVTime(u128);
 
 ///The Unix Epoch in LabVIEW epoch seconds for shifting timestamps between them.
 pub const UNIX_EPOCH_IN_LV_SECONDS: f64 = 2082844800.0;
-
-//todo:
-// * from/to bytes
 
 impl LVTime {
     /// Extract the sub-second component as a floating point number.

@@ -42,3 +42,7 @@ impl<T> UHandle<T> {
         self.0.as_ref().map(|ptr| ptr.as_mut()).flatten()
     }
 }
+
+#[derive(Clone, Copy)]
+#[repr(transparent)]
+pub(crate) struct MagicCookie(u32);
