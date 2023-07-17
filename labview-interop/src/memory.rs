@@ -5,16 +5,16 @@
 
 /// A pointer from LabVIEW for the data.
 #[repr(transparent)]
-pub struct UPtr<T>(*mut T);
+pub struct UPtr<T: ?Sized>(*mut T);
 
 /// A handle from LabVIEW for the data.
 ///
 /// A handle is a double pointer so the underlying
 /// data can be resized and moved.
 #[repr(transparent)]
-pub struct UHandle<T>(pub *mut *mut T);
+pub struct UHandle<T: ?Sized>(pub *mut *mut T);
 
-impl<T> UHandle<T> {
+impl<T: ?Sized> UHandle<T> {
     /// Get a reference to the internal type.
     /// # Safety
     /// This is a wrapper around [pointer::as_ref] and so must follow its safety rules. Namely:

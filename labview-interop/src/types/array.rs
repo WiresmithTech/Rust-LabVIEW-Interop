@@ -11,7 +11,7 @@ labview_layout!(
     /// todo: does this follow cluster packing rules? yes but lots breaks.
     pub struct LVArray<const D: usize, T> {
         dim_sizes: [i32; D],
-        data: T,
+        data: [T],
     }
 );
 
@@ -41,10 +41,13 @@ impl<const D: usize, T: Copy> LVArray<D, T> {
     /// # Safety
     ///
     /// If the index is out of the range then it is undefined behaviour.
-    pub unsafe fn get_value_unchecked(&self, index: usize) -> T {
+    pub fn get_value_unchecked(&self, index: usize) -> T {
+        /*
         let data_ptr = std::ptr::addr_of!(self.data);
         let element_ptr = data_ptr.offset(index as isize);
         std::ptr::read_unaligned(element_ptr)
+        */
+        self.data[index]
     }
 }
 
@@ -65,7 +68,7 @@ impl<const D: usize, T> LVArray<D, T> {
     pub fn data_as_slice(&self) -> &[T] {
         let size = self.element_count();
         // Safety: Dimensions are set by LabVIEW to be valid.
-        unsafe { std::slice::from_raw_parts(&self.data, size) }
+        unsafe { std::slice::from_raw_parts(self.data.as_ptr(), size) }
     }
 
     /// Get the data component as a muteable slice.
@@ -77,7 +80,7 @@ impl<const D: usize, T> LVArray<D, T> {
     pub fn data_as_slice_mut(&mut self) -> &mut [T] {
         let size = self.element_count();
         // Safety: Dimensions are set by LabVIEW to be valid.
-        unsafe { std::slice::from_raw_parts_mut(&mut self.data, size) }
+        unsafe { std::slice::from_raw_parts_mut(self.data.as_mut_ptr(), size) }
     }
 }
 

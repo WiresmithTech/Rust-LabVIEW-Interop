@@ -74,7 +74,7 @@ pub use timestamp::LVTime;
 macro_rules! labview_layout {
     ($struct:item) => {
         #[repr(C)]
-        #[cfg_attr(target_pointer_width = "32", repr(packed))]
+        #[cfg_attr(target_pointer_width = "32", repr(align(1)))]
         $struct
     };
 }

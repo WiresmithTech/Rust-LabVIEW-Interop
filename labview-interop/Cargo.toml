@@ -19,4 +19,6 @@ libloading = "0.8"
 
 
 [features]
+default = ["sync"]
 chrono = ["dep:chrono"]
+sync = []
