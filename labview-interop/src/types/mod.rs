@@ -91,7 +91,7 @@ labview_layout!(
     ///
     /// * t0: The start time of the data.
     /// * dt: The time delte between samples.
-    /// * data: A 1d array of type <T>
+    /// * data: A 1d array of type T
     ///
     /// ## Padding
     ///

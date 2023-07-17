@@ -17,7 +17,7 @@ pub struct UHandle<T: ?Sized>(pub *mut *mut T);
 impl<T: ?Sized> UHandle<T> {
     /// Get a reference to the internal type.
     /// # Safety
-    /// This is a wrapper around [pointer::as_ref] and so must follow its safety rules. Namely:
+    /// This is a wrapper around pointer::as_ref and so must follow its safety rules. Namely:
     ///
     ///* When calling this method, you have to ensure that either the pointer is null or all of the following is true:
     ///* The pointer must be properly aligned.
