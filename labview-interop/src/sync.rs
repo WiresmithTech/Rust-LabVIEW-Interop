@@ -6,8 +6,8 @@
 use std::ffi::c_void;
 use std::marker::PhantomData;
 
-use crate::errors::{MgErr, Result};
-use crate::labview::{load_sync_api, SYNC_API};
+use crate::errors::Result;
+use crate::labview::SYNC_API;
 use crate::memory::MagicCookie;
 
 type LVUserEventRef = MagicCookie;

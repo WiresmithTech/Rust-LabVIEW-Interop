@@ -45,4 +45,4 @@ impl<T: ?Sized> UHandle<T> {
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
-pub(crate) struct MagicCookie(u32);
+pub struct MagicCookie(u32);

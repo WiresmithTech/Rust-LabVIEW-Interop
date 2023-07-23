@@ -10,17 +10,17 @@ use dlopen2::wrapper::{Container, WrapperApi};
 use crate::{errors::MgErr, memory::MagicCookie};
 
 #[ctor]
-pub(crate) static SYNC_API: Container<SyncApi> = load_sync_api();
+pub static SYNC_API: Container<SyncApi> = load_sync_api();
 
 #[derive(WrapperApi)]
-pub(crate) struct SyncApi {
+pub struct SyncApi {
     #[dlopen2_name = "PostLVUserEvent"]
     post_lv_user_event: unsafe extern "C" fn(reference: MagicCookie, data: *mut c_void) -> MgErr,
     #[dlopen2_name = "Occur"]
     occur: unsafe extern "C" fn(occurance: MagicCookie) -> MgErr,
 }
 
-pub(crate) fn load_sync_api() -> Container<SyncApi> {
+pub fn load_sync_api() -> Container<SyncApi> {
     let cont: Container<SyncApi> =
         unsafe { Container::load_self().expect("Could not open library or load symbols") };
     cont

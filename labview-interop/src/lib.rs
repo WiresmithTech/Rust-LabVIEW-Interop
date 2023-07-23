@@ -1,5 +1,6 @@
 pub mod errors;
-pub(crate) mod labview;
+#[cfg(feature = "link")]
+mod labview;
 pub mod memory;
 #[cfg(feature = "sync")]
 pub mod sync;
