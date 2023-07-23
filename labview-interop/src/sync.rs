@@ -3,34 +3,12 @@
 //! back to labview.
 //!
 
-// todo add user event and occurance.
-
-use libloading::{Library, Symbol};
 use std::ffi::c_void;
 use std::marker::PhantomData;
 
 use crate::errors::{MgErr, Result};
+use crate::labview::{load_sync_api, SYNC_API};
 use crate::memory::MagicCookie;
-
-/*
-struct SyncMethods<'lib> {
-    pub post_lv_user_event:
-        Symbol<'lib, unsafe extern "C" fn(reference: LVUserEventRef, data: *mut c_void) -> MgErr>,
-}
-
-impl<'lib> SyncMethods<'lib> {
-    unsafe fn load() -> Self {
-        let lib = Library::new("labview").unwrap();
-        let post_lv_user_event = lib.get(b"PostLVUserEvent").unwrap();
-        return SyncMethods { post_lv_user_event };
-    }
-}
-*/
-
-extern "C" {
-    fn PostLVUserEvent(reference: LVUserEventRef, data: *mut c_void) -> MgErr;
-    fn Occur(occurance: MagicCookie) -> MgErr;
-}
 
 type LVUserEventRef = MagicCookie;
 
@@ -68,7 +46,11 @@ impl<T> LVUserEvent<T> {
     /// Right now the data needs to be a mutable reference as the
     /// LabVIEW API does not specify whether it will not be modified.
     pub fn post(&self, data: &mut T) -> Result<()> {
-        let mg_err = unsafe { PostLVUserEvent(self.reference, data as *mut T as *mut c_void) };
+        let mg_err = unsafe {
+            SYNC_API
+                .get_unchecked()
+                .post_lv_user_event(self.reference, data as *mut T as *mut c_void)
+        };
         mg_err.to_result(())
     }
 }
@@ -98,7 +80,7 @@ pub struct Occurence(MagicCookie);
 impl Occurence {
     /// "set" generates the occurence event which can be detected by LabVIEW.
     pub fn set(&self) -> Result<()> {
-        let mg_err = unsafe { Occur(self.0) };
+        let mg_err = unsafe { SYNC_API.get_unchecked().occur(self.0) };
         mg_err.to_result(())
     }
 }
