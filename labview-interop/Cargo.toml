@@ -18,7 +18,6 @@ chrono = { version = "~0.4.23", optional = true }
 dlopen2 = { version = "0.5"}
 dlopen2_derive = "0.3"
 ctor = "0.2.4"
-once_cell = "1.18"
 
 [features]
 default = ["sync"]

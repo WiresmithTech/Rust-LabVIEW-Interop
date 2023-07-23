@@ -6,11 +6,11 @@ use std::ffi::c_void;
 
 use ctor::ctor;
 use dlopen2::wrapper::{Container, WrapperApi};
-use once_cell::sync::OnceCell;
 
 use crate::{errors::MgErr, memory::MagicCookie};
 
-pub(crate) static SYNC_API: OnceCell<Container<SyncApi>> = OnceCell::new();
+#[ctor]
+pub(crate) static SYNC_API: Container<SyncApi> = load_sync_api();
 
 #[derive(WrapperApi)]
 pub(crate) struct SyncApi {
@@ -24,9 +24,4 @@ pub(crate) fn load_sync_api() -> Container<SyncApi> {
     let cont: Container<SyncApi> =
         unsafe { Container::load_self().expect("Could not open library or load symbols") };
     cont
-}
-
-#[ctor]
-fn init_interface() {
-    SYNC_API.set(load_sync_api());
 }
