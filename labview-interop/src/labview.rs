@@ -9,8 +9,16 @@ use dlopen2::wrapper::{Container, WrapperApi};
 
 use crate::{errors::MgErr, memory::MagicCookie};
 
+/// Represents as UHandle passed by value. Can't use the generic
+/// version from the memory module else since the functions
+/// aren't generic.
+type UHandleValue = usize;
+
 #[ctor]
 pub static SYNC_API: Container<SyncApi> = load_sync_api();
+
+#[ctor]
+pub static MEMORY_API: Container<MemoryApi> = load_memory_api();
 
 #[derive(WrapperApi)]
 pub struct SyncApi {
@@ -22,6 +30,18 @@ pub struct SyncApi {
 
 pub fn load_sync_api() -> Container<SyncApi> {
     let cont: Container<SyncApi> =
+        unsafe { Container::load_self().expect("Could not open library or load symbols") };
+    cont
+}
+
+#[derive(WrapperApi)]
+pub struct MemoryApi {
+    #[dlopen2_name = "DSSetHandleSize"]
+    set_handle_size: unsafe extern "C" fn(handle: UHandleValue, size: usize) -> MgErr,
+}
+
+pub fn load_memory_api() -> Container<MemoryApi> {
+    let cont: Container<MemoryApi> =
         unsafe { Container::load_self().expect("Could not open library or load symbols") };
     cont
 }

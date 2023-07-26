@@ -2,6 +2,7 @@
 //! and functions for handling types from LabVIEW.
 
 pub mod array;
+pub mod string;
 pub mod timestamp;
 
 use std::ffi::c_void;
@@ -10,6 +11,7 @@ use crate::memory::UHandle;
 
 //surface some of the common types.
 pub use array::{LVArray, LVArrayHandle};
+pub use string::LStrHandle;
 pub use timestamp::LVTime;
 
 /// Wrap a struct declaration to have the packing attributes

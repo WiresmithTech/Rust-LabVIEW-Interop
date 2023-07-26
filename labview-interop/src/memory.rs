@@ -2,6 +2,7 @@
 //! functions and types.
 //!
 //! todo: get to reference without panics.
+use crate::errors::Result;
 
 /// A pointer from LabVIEW for the data.
 #[repr(transparent)]
@@ -40,6 +41,15 @@ impl<T: ?Sized> UHandle<T> {
     /// * You must enforce Rust’s aliasing rules, since the returned lifetime 'a is arbitrarily chosen and does not necessarily reflect the actual lifetime of the data. In particular, while this reference exists, the memory the pointer points to must not get accessed (read or written) through any other pointer.
     pub unsafe fn as_mut(&self) -> Option<&mut T> {
         self.0.as_ref().map(|ptr| ptr.as_mut()).flatten()
+    }
+}
+
+#[cfg(feature = "link")]
+impl<T: ?Sized> UHandle<T> {
+    /// Resize the handle to the desired size.
+    pub unsafe fn resize(&mut self, desired_size: usize) -> Result<()> {
+        let err = crate::labview::MEMORY_API.set_handle_size(self.0 as usize, desired_size);
+        err.to_result(())
     }
 }
 

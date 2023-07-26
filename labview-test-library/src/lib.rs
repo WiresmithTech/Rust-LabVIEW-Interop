@@ -1,8 +1,9 @@
 use labview_interop::errors::MgErr;
 use labview_interop::labview_layout;
 use labview_interop::sync::{LVUserEvent, Occurence};
-use labview_interop::types::{array, LVArray, LVArrayHandle, LVTime, LVVariant, Waveform};
-use std::ffi::c_void;
+use labview_interop::types::string::LStrHandle;
+use labview_interop::types::{LVArrayHandle, LVTime, LVVariant, Waveform};
+
 use std::ptr::{addr_of, read_unaligned};
 
 #[no_mangle]
@@ -161,19 +162,19 @@ pub extern "C" fn extract_cluster_variant(
 pub extern "C" fn generate_event_3(lv_user_event: *mut LVUserEvent<i32>) -> MgErr {
     let event = unsafe { *lv_user_event };
     let result = event.post(&mut 3);
-    match result {
-        Ok(_) => MgErr::NO_ERROR,
-        Err(err) => err,
-    }
+    result.into()
 }
 
 #[no_mangle]
 pub extern "C" fn generate_occurence(occurence: *mut Occurence) -> MgErr {
     let result = unsafe { (*occurence).set() };
-    match result {
-        Ok(_) => MgErr::NO_ERROR,
-        Err(err) => err,
-    }
+    result.into()
+}
+
+#[no_mangle]
+pub extern "C" fn hello_world(mut string: LStrHandle) -> MgErr {
+    let result = string.set(b"Hello World");
+    result.into()
 }
 
 pub fn test() {
