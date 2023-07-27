@@ -2,6 +2,7 @@
 //! and functions for handling types from LabVIEW.
 
 pub mod array;
+mod boolean;
 pub mod string;
 pub mod timestamp;
 
@@ -11,6 +12,7 @@ use crate::memory::UHandle;
 
 //surface some of the common types.
 pub use array::{LVArray, LVArrayHandle};
+pub use boolean::LVBool;
 pub use string::LStrHandle;
 pub use timestamp::LVTime;
 
