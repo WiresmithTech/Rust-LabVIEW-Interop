@@ -1,18 +1,50 @@
 //! Handle the various string times that the LabVIEW
 //! interface provides.
 //!
-use std::borrow::Cow;
+use ctor::ctor;
 
-use encoding_rs::{Encoding, WINDOWS_1252};
+use encoding_rs::Encoding;
+use std::borrow::Cow;
 
 use crate::errors::{LVInteropError, Result};
 use crate::labview_layout;
 use crate::memory::{UHandle, UPtr};
 
-static LV_ENCODING: &'static Encoding = WINDOWS_1252;
+#[cfg(target_os = "windows")]
+fn get_encoding() -> &'static Encoding {
+    #[link(name = "kernel32")]
+    extern "stdcall" {
+        fn GetACP() -> u32;
+    }
+
+    //SAFETY: No real concerns with this call.
+    let code_page = unsafe { GetACP() };
+
+    // Crap - ctor errors again. I think it is reasonably safe
+    // to assume LabVIEW isn't going to hit anything to unusual
+    // due to it's level of support.
+    codepage::to_encoding(code_page as u16).expect("Unknown code page.")
+}
+
+#[cfg(target_os = "linux")]
+fn get_encoding() -> &'static Encoding {
+    encoding_rs::WINDOWS_1252
+}
+
+#[cfg(target_os = "mac")]
+fn get_encoding() -> &'static Encoding {
+    encoding_rs::UTF_8
+}
+
+/// The encoding that LabVIEW uses on the current platform.
+#[ctor]
+static LV_ENCODING: &'static Encoding = get_encoding();
 
 labview_layout!(
-    /// Internal LabVIEW string
+    /// Internal LabVIEW string structure.
+    ///
+    /// This is the recommended type when interfacing with LabVIEW
+    /// as it is also the internal format so no translation is needed.
     pub struct LStr {
         size: i32,
         data: [u8],
@@ -55,7 +87,7 @@ impl LStr {
     /// This returns a [`std::borrow::Cow`] to avoid any allocations if the
     /// input is already valid UTF8.
     pub fn as_rust_string(&self) -> Cow<str> {
-        self.as_rust_string_with_encoding(LV_ENCODING)
+        self.as_rust_string_with_encoding(&LV_ENCODING)
     }
 }
 
@@ -106,7 +138,7 @@ impl LStrHandle {
     /// allocate a new intermediate buffer to hold the decoded results before writing to the
     /// LabVIEW string.
     pub fn set_str(&mut self, value: &str) -> Result<()> {
-        self.set_str_with_encoding(LV_ENCODING, value)
+        self.set_str_with_encoding(&LV_ENCODING, value)
     }
 
     /// Set string with encoder takes a Rust string and puts it into the LabVIEW String.
