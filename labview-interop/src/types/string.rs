@@ -1,10 +1,15 @@
 //! Handle the various string times that the LabVIEW
 //! interface provides.
 //!
+use std::borrow::Cow;
+
+use encoding_rs::{Encoding, WINDOWS_1252};
 
 use crate::errors::{LVInteropError, Result};
 use crate::labview_layout;
 use crate::memory::{UHandle, UPtr};
+
+static LV_ENCODING: &'static Encoding = WINDOWS_1252;
 
 labview_layout!(
     /// Internal LabVIEW string
@@ -34,6 +39,23 @@ impl LStr {
     /// the data and access [`LStrHandle::set`]
     pub fn as_mut_slice(&mut self) -> &mut [u8] {
         unsafe { std::slice::from_raw_parts_mut(self.data.as_mut_ptr(), self.size as usize) }
+    }
+
+    /// Uses a system appropriate decoder to return a rust compatible string.
+    ///
+    /// This returns a [`std::borrow::Cow`] to avoid any allocations if the
+    /// input is already valid UTF8.
+    pub fn as_rust_string_with_encoding(&self, encoding: &'static Encoding) -> Cow<str> {
+        let (result, _, _) = encoding.decode(self.as_slice());
+        result
+    }
+
+    /// Uses a system appropriate decoder to return a rust compatible string.
+    ///
+    /// This returns a [`std::borrow::Cow`] to avoid any allocations if the
+    /// input is already valid UTF8.
+    pub fn as_rust_string(&self) -> Cow<str> {
+        self.as_rust_string_with_encoding(LV_ENCODING)
     }
 }
 
@@ -72,5 +94,34 @@ impl LStrHandle {
         }
 
         Ok(())
+    }
+
+    /// Set string takes a Rust string and puts it into the LabVIEW String.
+    ///
+    /// This is a two step process:
+    /// 1. Encode from Rust (UTF8) to LabVIEW encoding (based on system code page on Windows).
+    /// 2. Write this encoding into the LabVIEW string.
+    ///
+    /// If the input is valid ASCII then no additional data copies are made. If not then this will
+    /// allocate a new intermediate buffer to hold the decoded results before writing to the
+    /// LabVIEW string.
+    pub fn set_str(&mut self, value: &str) -> Result<()> {
+        self.set_str_with_encoding(LV_ENCODING, value)
+    }
+
+    /// Set string with encoder takes a Rust string and puts it into the LabVIEW String.
+    ///
+    /// This is a two step process:
+    /// 1. Encode from Rust (UTF8) to LabVIEW encoding with the provided encoder.
+    /// 2. Write this encoding into the LabVIEW string.
+    ///
+    /// If the input is valid ASCII then no additional data copies are made. If not then this will
+    /// allocate a new intermediate buffer to hold the decoded results before writing to the
+    /// LabVIEW string.
+    ///
+    /// The encoder should be an encoder provided by the encoding_rs crate.
+    pub fn set_str_with_encoding(&mut self, encoder: &'static Encoding, value: &str) -> Result<()> {
+        let (buffer, _, _) = encoder.encode(value);
+        self.set(&buffer)
     }
 }
