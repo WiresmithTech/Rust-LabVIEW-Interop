@@ -77,7 +77,7 @@ impl LStr {
     ///
     /// This returns a [`std::borrow::Cow`] to avoid any allocations if the
     /// input is already valid UTF8.
-    pub fn as_rust_string_with_encoding(&self, encoding: &'static Encoding) -> Cow<str> {
+    pub fn to_rust_string_with_encoding(&self, encoding: &'static Encoding) -> Cow<str> {
         let (result, _, _) = encoding.decode(self.as_slice());
         result
     }
@@ -86,8 +86,35 @@ impl LStr {
     ///
     /// This returns a [`std::borrow::Cow`] to avoid any allocations if the
     /// input is already valid UTF8.
-    pub fn as_rust_string(&self) -> Cow<str> {
-        self.as_rust_string_with_encoding(&LV_ENCODING)
+    ///
+    /// # Example
+    /// ```
+    /// #[no_mangle]
+    /// pub extern "C" fn string_check(mut string: LStrHandle) -> MgErr {
+    ///    let string_value = string.to_string();
+    ///    format!("Read value: {string_value}");
+    /// }
+    //```
+    pub fn to_rust_string(&self) -> Cow<str> {
+        self.to_rust_string_with_encoding(&LV_ENCODING)
+    }
+}
+
+impl std::fmt::Display for LStr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_rust_string())
+    }
+}
+
+impl std::fmt::Debug for LStr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "\"{}\"", self.to_rust_string())
+    }
+}
+
+impl PartialEq for LStr {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_slice() == other.as_slice()
     }
 }
 

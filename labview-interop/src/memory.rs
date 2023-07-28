@@ -8,6 +8,7 @@ use crate::errors::Result;
 
 /// A pointer from LabVIEW for the data.
 #[repr(transparent)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct UPtr<T: ?Sized>(*mut T);
 
 /// A handle from LabVIEW for the data.
@@ -15,6 +16,7 @@ pub struct UPtr<T: ?Sized>(*mut T);
 /// A handle is a double pointer so the underlying
 /// data can be resized and moved.
 #[repr(transparent)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct UHandle<T: ?Sized>(pub *mut *mut T);
 
 impl<T: ?Sized> UHandle<T> {
@@ -81,6 +83,6 @@ impl<T: ?Sized> UHandle<T> {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(transparent)]
 pub struct MagicCookie(u32);
