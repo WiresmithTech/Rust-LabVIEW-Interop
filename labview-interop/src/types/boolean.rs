@@ -28,10 +28,7 @@ impl From<bool> for LVBool {
 
 impl From<LVBool> for bool {
     fn from(value: LVBool) -> Self {
-        match value.0 {
-            0 => false,
-            _ => true,
-        }
+        !matches!(value.0, 0)
     }
 }
 

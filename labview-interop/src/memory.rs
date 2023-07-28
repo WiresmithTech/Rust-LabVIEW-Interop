@@ -33,8 +33,7 @@ impl<T: ?Sized> UHandle<T> {
     pub unsafe fn as_ref(&self) -> Result<&T> {
         self.0
             .as_ref()
-            .map(|ptr| ptr.as_ref())
-            .flatten()
+            .and_then(|ptr| ptr.as_ref())
             .ok_or(LVInteropError::InvalidHandle)
     }
 
@@ -51,8 +50,7 @@ impl<T: ?Sized> UHandle<T> {
     pub unsafe fn as_ref_mut(&self) -> Result<&mut T> {
         self.0
             .as_ref()
-            .map(|ptr| ptr.as_mut())
-            .flatten()
+            .and_then(|ptr| ptr.as_mut())
             .ok_or(LVInteropError::InvalidHandle)
     }
 
@@ -86,6 +84,10 @@ impl<T: ?Sized> DerefMut for UHandle<T> {
 #[cfg(feature = "link")]
 impl<T: ?Sized> UHandle<T> {
     /// Resize the handle to the desired size.
+    ///
+    /// # Safety
+    ///
+    /// * The handle must be valid.
     pub unsafe fn resize(&mut self, desired_size: usize) -> Result<()> {
         let err = crate::labview::memory_api()?.set_handle_size(self.0 as usize, desired_size);
         err.to_result(())

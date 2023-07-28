@@ -41,13 +41,12 @@ impl<const D: usize, T: Copy> LVArray<D, T> {
     /// # Safety
     ///
     /// If the index is out of the range then it is undefined behaviour.
-    pub fn get_value_unchecked(&self, index: usize) -> T {
-        /*
-        let data_ptr = std::ptr::addr_of!(self.data);
-        let element_ptr = data_ptr.offset(index as isize);
+    pub unsafe fn get_value_unchecked(&self, index: usize) -> T {
+        let data_ptr = std::ptr::addr_of!(self.data) as *const T;
+        let element_ptr = data_ptr.add(index);
         std::ptr::read_unaligned(element_ptr)
-        */
-        self.data[index]
+
+        //self.data[index]
     }
 }
 
