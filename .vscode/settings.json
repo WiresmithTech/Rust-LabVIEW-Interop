@@ -1,6 +1,5 @@
 {
     "lldb.displayFormat": "auto",
-    "lldb.showDisassembly": "always",
     "lldb.dereferencePointers": false,
     "lldb.consoleMode": "commands",
     "rust-analyzer.linkedProjects": [

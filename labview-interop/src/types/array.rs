@@ -11,14 +11,20 @@ labview_layout!(
     /// todo: does this follow cluster packing rules? yes but lots breaks.
     pub struct LVArray<const D: usize, T> {
         dim_sizes: [i32; D],
+        // For 64 bit use the DST syntax which is more correct to what we
+        // are representing.
+        #[cfg(target_pointer_width = "64")]
         data: [T],
+        // DST not supported in packing used for 32 bit.
+        #[cfg(target_pointer_width = "32")]
+        data: T,
     }
 );
 
 ///implement a basic, unsafe API that works for packed usage on 32 bit targets.
 ///
 /// It is copy only as we must copy out of the pointers.
-impl<const D: usize, T: Copy> LVArray<D, T> {
+impl<const D: usize, T> LVArray<D, T> {
     /// Get the data size. Works with the packed structures found in the 32 bit interface.
     pub fn get_data_size(&self) -> usize {
         let mut size: usize = 1;

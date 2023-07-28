@@ -216,7 +216,7 @@ pub fn test() {
     };
 
     // Not allowed.
-    let three_ref = &value.three;
+    //let three_ref = &value.three;
 
     unsafe {
         let three_ptr: *const u32 = addr_of!(value.three);
