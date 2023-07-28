@@ -6,7 +6,7 @@ use ctor::ctor;
 use encoding_rs::Encoding;
 use std::borrow::Cow;
 
-use crate::errors::{LVInteropError, Result};
+use crate::errors::Result;
 use crate::labview_layout;
 use crate::memory::{UHandle, UPtr};
 
@@ -118,6 +118,10 @@ impl PartialEq for LStr {
     }
 }
 
+/// Implement features that require a full string handle rather than just the [`LStr`]
+/// type.
+///
+/// Requires the link feature.
 #[cfg(feature = "link")]
 impl LStrHandle {
     /// Set the string as a binary value against the handle.
@@ -145,7 +149,7 @@ impl LStrHandle {
             let struct_size = input_length + 4;
             self.resize(struct_size)?;
 
-            let l_str = self.as_mut().ok_or(LVInteropError::InvalidHandle)?;
+            let l_str = self.as_ref_mut()?;
             l_str.size = input_length as i32;
             for (value, output) in value.iter().zip(l_str.data.iter_mut()) {
                 *output = *value;
