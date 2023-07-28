@@ -7,7 +7,10 @@ use std::ffi::c_void;
 use ctor::ctor;
 use dlopen2::wrapper::{Container, WrapperApi};
 
-use crate::{errors::MgErr, memory::MagicCookie};
+use crate::{
+    errors::{LVInteropError, MgErr, Result},
+    memory::MagicCookie,
+};
 
 /// Represents as UHandle passed by value. Can't use the generic
 /// version from the memory module else since the functions
@@ -15,10 +18,18 @@ use crate::{errors::MgErr, memory::MagicCookie};
 type UHandleValue = usize;
 
 #[ctor]
-pub static SYNC_API: Container<SyncApi> = load_sync_api();
+static SYNC_API: Option<Container<SyncApi>> = Container::load_self().ok();
+
+pub fn sync_api() -> Result<&'static Container<SyncApi>> {
+    SYNC_API.as_ref().ok_or(LVInteropError::NoLabviewApi)
+}
 
 #[ctor]
-pub static MEMORY_API: Container<MemoryApi> = load_memory_api();
+static MEMORY_API: Option<Container<MemoryApi>> = Container::load_self().ok();
+
+pub fn memory_api() -> Result<&'static Container<MemoryApi>> {
+    MEMORY_API.as_ref().ok_or(LVInteropError::NoLabviewApi)
+}
 
 #[derive(WrapperApi)]
 pub struct SyncApi {
@@ -28,20 +39,8 @@ pub struct SyncApi {
     occur: unsafe extern "C" fn(occurance: MagicCookie) -> MgErr,
 }
 
-pub fn load_sync_api() -> Container<SyncApi> {
-    let cont: Container<SyncApi> =
-        unsafe { Container::load_self().expect("Could not open library or load symbols") };
-    cont
-}
-
 #[derive(WrapperApi)]
 pub struct MemoryApi {
     #[dlopen2_name = "DSSetHandleSize"]
     set_handle_size: unsafe extern "C" fn(handle: UHandleValue, size: usize) -> MgErr,
-}
-
-pub fn load_memory_api() -> Container<MemoryApi> {
-    let cont: Container<MemoryApi> =
-        unsafe { Container::load_self().expect("Could not open library or load symbols") };
-    cont
 }

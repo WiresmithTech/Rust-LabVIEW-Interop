@@ -3,7 +3,7 @@ use thiserror::Error;
 
 /// MgErr is a simple wrapper around the error code that
 /// is returned by the memory manager functions.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct MgErr(i32);
 
@@ -44,6 +44,8 @@ pub enum LVInteropError {
     LabviewError(#[from] MgErr),
     #[error("Invalid handle when valid handle is required")]
     InvalidHandle,
+    #[error("LabVIEW API unavailable. Probably because it isn't being run in LabVIEW")]
+    NoLabviewApi,
 }
 
 pub type Result<T> = std::result::Result<T, LVInteropError>;
@@ -53,6 +55,7 @@ impl From<LVInteropError> for MgErr {
         match value {
             LVInteropError::LabviewError(err) => err,
             LVInteropError::InvalidHandle => MgErr::INTEROP_ERROR,
+            LVInteropError::NoLabviewApi => MgErr(-2),
         }
     }
 }

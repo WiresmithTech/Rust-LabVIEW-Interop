@@ -87,7 +87,7 @@ impl<T: ?Sized> DerefMut for UHandle<T> {
 impl<T: ?Sized> UHandle<T> {
     /// Resize the handle to the desired size.
     pub unsafe fn resize(&mut self, desired_size: usize) -> Result<()> {
-        let err = crate::labview::MEMORY_API.set_handle_size(self.0 as usize, desired_size);
+        let err = crate::labview::memory_api()?.set_handle_size(self.0 as usize, desired_size);
         err.to_result(())
     }
 }

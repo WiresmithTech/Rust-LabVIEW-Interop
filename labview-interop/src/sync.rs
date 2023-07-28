@@ -7,7 +7,7 @@ use std::ffi::c_void;
 use std::marker::PhantomData;
 
 use crate::errors::Result;
-use crate::labview::SYNC_API;
+use crate::labview::sync_api;
 use crate::memory::MagicCookie;
 
 type LVUserEventRef = MagicCookie;
@@ -46,8 +46,9 @@ impl<T> LVUserEvent<T> {
     /// Right now the data needs to be a mutable reference as the
     /// LabVIEW API does not specify whether it will not be modified.
     pub fn post(&self, data: &mut T) -> Result<()> {
-        let mg_err =
-            unsafe { SYNC_API.post_lv_user_event(self.reference, data as *mut T as *mut c_void) };
+        let mg_err = unsafe {
+            sync_api()?.post_lv_user_event(self.reference, data as *mut T as *mut c_void)
+        };
         mg_err.to_result(())
     }
 }
@@ -77,7 +78,7 @@ pub struct Occurence(MagicCookie);
 impl Occurence {
     /// "set" generates the occurence event which can be detected by LabVIEW.
     pub fn set(&self) -> Result<()> {
-        let mg_err = unsafe { SYNC_API.occur(self.0) };
+        let mg_err = unsafe { sync_api()?.occur(self.0) };
         mg_err.to_result(())
     }
 }

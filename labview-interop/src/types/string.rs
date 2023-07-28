@@ -1,7 +1,6 @@
 //! Handle the various string times that the LabVIEW
 //! interface provides.
 //!
-use ctor::ctor;
 
 use encoding_rs::Encoding;
 use std::borrow::Cow;
@@ -36,8 +35,8 @@ fn get_encoding() -> &'static Encoding {
     encoding_rs::UTF_8
 }
 
+#[ctor::ctor]
 /// The encoding that LabVIEW uses on the current platform.
-#[ctor]
 static LV_ENCODING: &'static Encoding = get_encoding();
 
 labview_layout!(
