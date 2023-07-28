@@ -4,6 +4,7 @@ use labview_interop::sync::{LVUserEvent, Occurence};
 use labview_interop::types::string::LStrHandle;
 use labview_interop::types::{LVArrayHandle, LVTime, LVVariant, Waveform};
 
+use std::ffi::{c_char, CStr};
 use std::ptr::{addr_of, read_unaligned};
 
 #[no_mangle]
@@ -180,6 +181,20 @@ pub extern "C" fn hello_world(mut string: LStrHandle) -> MgErr {
 #[no_mangle]
 pub extern "C" fn count_words(string: LStrHandle, count: &mut i32) -> MgErr {
     let rust_string = string.to_rust_string();
+    *count = rust_string.split_ascii_whitespace().count() as i32;
+    MgErr::NO_ERROR
+}
+
+#[no_mangle]
+pub extern "C" fn count_words_lossy(string: LStrHandle, count: &mut i32) -> MgErr {
+    let rust_string = String::from_utf8_lossy(string.as_slice());
+    *count = rust_string.split_ascii_whitespace().count() as i32;
+    MgErr::NO_ERROR
+}
+
+#[no_mangle]
+pub extern "C" fn count_words_c_string(string: *const c_char, count: &mut i32) -> MgErr {
+    let rust_string = unsafe { CStr::from_ptr(string).to_string_lossy() };
     *count = rust_string.split_ascii_whitespace().count() as i32;
     MgErr::NO_ERROR
 }
