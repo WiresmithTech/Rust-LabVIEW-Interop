@@ -179,8 +179,7 @@ pub extern "C" fn hello_world(mut string: LStrHandle) -> MgErr {
 
 #[no_mangle]
 pub extern "C" fn count_words(string: LStrHandle, count: &mut i32) -> MgErr {
-    let lstr = unsafe { string.as_ref().unwrap() };
-    let rust_string = lstr.as_rust_string();
+    let rust_string = string.as_rust_string();
     *count = rust_string.split_ascii_whitespace().count() as i32;
     MgErr::NO_ERROR
 }

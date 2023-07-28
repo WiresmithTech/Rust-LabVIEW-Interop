@@ -2,6 +2,8 @@
 //! functions and types.
 //!
 //! todo: get to reference without panics.
+use std::ops::{Deref, DerefMut};
+
 use crate::errors::Result;
 
 /// A pointer from LabVIEW for the data.
@@ -41,6 +43,32 @@ impl<T: ?Sized> UHandle<T> {
     /// * You must enforce Rust’s aliasing rules, since the returned lifetime 'a is arbitrarily chosen and does not necessarily reflect the actual lifetime of the data. In particular, while this reference exists, the memory the pointer points to must not get accessed (read or written) through any other pointer.
     pub unsafe fn as_mut(&self) -> Option<&mut T> {
         self.0.as_ref().map(|ptr| ptr.as_mut()).flatten()
+    }
+
+    /// Check the validity of the handle to ensure it wont panic later.
+    pub fn valid(&self) -> bool {
+        let inner_ref = unsafe { self.as_ref() };
+        inner_ref.is_some()
+    }
+}
+
+impl<T: ?Sized> Deref for UHandle<T> {
+    type Target = T;
+
+    /// Extract the target type.
+    ///
+    /// This will panic if the handle or internal pointer is null.
+    fn deref(&self) -> &Self::Target {
+        unsafe { self.as_ref().unwrap() }
+    }
+}
+
+impl<T: ?Sized> DerefMut for UHandle<T> {
+    /// Deref to a mutable reference.
+    ///
+    /// This will panic if the handle or internal pointer is null.
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { self.as_mut().unwrap() }
     }
 }
 
