@@ -1,3 +1,8 @@
+## v0.2.1
+
+### Fixes
+
+* Add unsafe to ctor elements in LabVIEW interface as some versions of rust threw errors.
 
 ## v0.2.0
 

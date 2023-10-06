@@ -18,14 +18,14 @@ use crate::{
 type UHandleValue = usize;
 
 #[ctor]
-static SYNC_API: Option<Container<SyncApi>> = Container::load_self().ok();
+static SYNC_API: Option<Container<SyncApi>> = unsafe { Container::load_self().ok() };
 
 pub fn sync_api() -> Result<&'static Container<SyncApi>> {
     SYNC_API.as_ref().ok_or(LVInteropError::NoLabviewApi)
 }
 
 #[ctor]
-static MEMORY_API: Option<Container<MemoryApi>> = Container::load_self().ok();
+static MEMORY_API: Option<Container<MemoryApi>> = unsafe { Container::load_self().ok() };
 
 pub fn memory_api() -> Result<&'static Container<MemoryApi>> {
     MEMORY_API.as_ref().ok_or(LVInteropError::NoLabviewApi)
