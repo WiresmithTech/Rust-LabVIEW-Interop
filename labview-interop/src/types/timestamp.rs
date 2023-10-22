@@ -12,6 +12,10 @@ pub enum LVTimeError {
     ChronoOutOfRange,
 }
 
+// The LV Type consists really of a (i64, u64) but
+// the effective storage type is u128 so I've kept
+// it there for now.
+
 /// Mirrors the internal LabVIEW timestamp structure so
 /// it can be passed back and forward.
 #[repr(transparent)]
@@ -29,7 +33,7 @@ impl LVTime {
     }
 
     ///Extract the seconds component which is referenced to the LabVIEW epoc.
-    pub fn seconds(&self) -> i64 {
+    pub const fn seconds(&self) -> i64 {
         (self.0 >> 64) as i64
     }
 
@@ -60,23 +64,25 @@ impl LVTime {
     }
 
     /// Build from the full seconds and fractional second parts.
-    pub fn from_parts(seconds: i64, fractions: u64) -> Self {
+    pub const fn from_parts(seconds: i64, fractions: u64) -> Self {
         let time = (seconds as u128) << 64 | (fractions as u128);
         Self(time)
     }
 
     /// Seperate out the u64 components.
     #[inline]
-    pub fn to_parts(&self) -> (i64, u64) {
+    pub const fn to_parts(&self) -> (i64, u64) {
         let fractions = (self.0 & 0xFFFF_FFFF_FFFF_FFFF) as u64;
         (self.seconds(), fractions)
     }
 
     /// Load from u128 which is the storage format
+    #[inline]
     const fn from_u128(repr: u128) -> Self {
         Self(repr)
     }
 
+    #[inline]
     const fn as_u128(&self) -> &u128 {
         &self.0
     }
