@@ -24,13 +24,13 @@ pub const UNIX_EPOCH_IN_LV_SECONDS: f64 = 2082844800.0;
 impl LVTime {
     /// Extract the sub-second component as a floating point number.
     pub fn sub_seconds(&self) -> f64 {
-        let fractional = self.0 & 0xFFFF_FFFF_FFFF_FFFF;
+        let fractional = self.to_parts().1;
         (fractional as f64) / 0xFFFF_FFFF_FFFF_FFFFu64 as f64
     }
 
     ///Extract the seconds component which is referenced to the LabVIEW epoc.
-    pub fn seconds(&self) -> u64 {
-        (self.0 >> 64) as u64
+    pub fn seconds(&self) -> i64 {
+        (self.0 >> 64) as i64
     }
 
     /// From a double precision number which is the seconds
@@ -38,7 +38,7 @@ impl LVTime {
     pub fn from_lv_epoch(seconds: f64) -> Self {
         let (seconds, fractions) = (seconds / 1.0, seconds % 1.0);
         let integer_fractions = (fractions * 0xFFFF_FFFF_FFFF_FFFFu64 as f64) as u64;
-        Self::from_parts(seconds as u64, integer_fractions)
+        Self::from_parts(seconds as i64, integer_fractions)
     }
 
     /// Into a double precision number which is the seconds
@@ -60,35 +60,45 @@ impl LVTime {
     }
 
     /// Build from the full seconds and fractional second parts.
-    pub fn from_parts(seconds: u64, fractions: u64) -> Self {
+    pub fn from_parts(seconds: i64, fractions: u64) -> Self {
         let time = (seconds as u128) << 64 | (fractions as u128);
         Self(time)
     }
 
     /// Seperate out the u64 components.
-    pub fn to_parts(&self) -> (u64, u64) {
+    #[inline]
+    pub fn to_parts(&self) -> (i64, u64) {
         let fractions = (self.0 & 0xFFFF_FFFF_FFFF_FFFF) as u64;
         (self.seconds(), fractions)
     }
 
+    /// Load from u128 which is the storage format
+    const fn from_u128(repr: u128) -> Self {
+        Self(repr)
+    }
+
+    const fn as_u128(&self) -> &u128 {
+        &self.0
+    }
+
     /// To little endian bytes.
-    pub fn to_le_bytes(&self) -> [u8; 16] {
-        self.0.to_le_bytes()
+    pub const fn to_le_bytes(&self) -> [u8; 16] {
+        self.as_u128().to_le_bytes()
     }
 
     /// To big endian bytes.
-    pub fn to_be_bytes(&self) -> [u8; 16] {
-        self.0.to_be_bytes()
+    pub const fn to_be_bytes(&self) -> [u8; 16] {
+        self.as_u128().to_be_bytes()
     }
 
     /// From little endian bytes.
-    pub fn from_le_bytes(bytes: [u8; 16]) -> Self {
-        Self(u128::from_le_bytes(bytes))
+    pub const fn from_le_bytes(bytes: [u8; 16]) -> Self {
+        Self::from_u128(u128::from_le_bytes(bytes))
     }
 
     /// From big endian bytes.
-    pub fn from_be_bytes(bytes: [u8; 16]) -> Self {
-        Self(u128::from_be_bytes(bytes))
+    pub const fn from_be_bytes(bytes: [u8; 16]) -> Self {
+        Self::from_u128(u128::from_be_bytes(bytes))
     }
 }
 

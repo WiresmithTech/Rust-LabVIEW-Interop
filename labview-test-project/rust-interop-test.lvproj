@@ -16,6 +16,7 @@
 		<Item Name="Data Structure Tests.lvclass" Type="LVClass" URL="../Data Structure Tests/Data Structure Tests.lvclass"/>
 		<Item Name="String Tests.lvclass" Type="LVClass" URL="../String Tests/String Tests.lvclass"/>
 		<Item Name="Sync Tests.lvclass" Type="LVClass" URL="../Sync Tests/Sync Tests.lvclass"/>
+		<Item Name="test negative timestamp.vi" Type="VI" URL="../Timestamp Tests/test negative timestamp.vi"/>
 		<Item Name="Timestamp Tests.lvclass" Type="LVClass" URL="../Timestamp Tests/Timestamp Tests.lvclass"/>
 		<Item Name="Dependencies" Type="Dependencies">
 			<Item Name="vi.lib" Type="Folder">
