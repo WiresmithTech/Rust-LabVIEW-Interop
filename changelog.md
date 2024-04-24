@@ -1,3 +1,14 @@
+
+## v0.3.0
+
+### Features
+
+* Added support for error clusters.
+
+### Fixes
+
+* Altered LVTime seconds component to i64 instead of u64
+
 ## v0.2.1
 
 ### Fixes

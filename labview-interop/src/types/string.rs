@@ -37,7 +37,7 @@ fn get_encoding() -> &'static Encoding {
 
 #[ctor::ctor]
 /// The encoding that LabVIEW uses on the current platform.
-static LV_ENCODING: &'static Encoding = get_encoding();
+pub(crate) static LV_ENCODING: &'static Encoding = get_encoding();
 
 labview_layout!(
     /// Internal LabVIEW string structure.

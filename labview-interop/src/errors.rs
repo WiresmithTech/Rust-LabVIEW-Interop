@@ -7,6 +7,12 @@ use thiserror::Error;
 #[repr(transparent)]
 pub struct MgErr(i32);
 
+impl From<i32> for MgErr {
+    fn from(value: i32) -> MgErr {
+        MgErr(value)
+    }
+}
+
 impl MgErr {
     pub const NO_ERROR: MgErr = MgErr(0);
     pub const INTEROP_ERROR: MgErr = MgErr(-1);

@@ -2,6 +2,8 @@ use labview_interop::errors::MgErr;
 use labview_interop::labview_layout;
 use labview_interop::sync::{LVUserEvent, Occurence};
 use labview_interop::types::string::LStrHandle;
+#[cfg(target_pointer_width = "64")]
+use labview_interop::types::{ErrorClusterPtr, ToLvError};
 use labview_interop::types::{LVArrayHandle, LVTime, LVVariant, Waveform};
 
 use std::ffi::{c_char, CStr};
@@ -197,6 +199,27 @@ pub extern "C" fn count_words_c_string(string: *const c_char, count: &mut i32) -
     let rust_string = unsafe { CStr::from_ptr(string).to_string_lossy() };
     *count = rust_string.split_ascii_whitespace().count() as i32;
     MgErr::NO_ERROR
+}
+
+/// A simple type for testing the error integration.
+struct ErrorText(&'static str);
+
+#[cfg(target_pointer_width = "64")]
+impl ToLvError for ErrorText {
+    fn source(&self) -> std::borrow::Cow<'_, str> {
+        "Rust".into()
+    }
+
+    fn description(&self) -> std::borrow::Cow<'_, str> {
+        self.0.into()
+    }
+}
+
+#[cfg(target_pointer_width = "64")]
+#[no_mangle]
+pub extern "C" fn set_error_cluster(error_cluster: ErrorClusterPtr) -> MgErr {
+    let error = ErrorText("This is a test");
+    error.write_error(error_cluster).into()
 }
 
 pub fn test() {

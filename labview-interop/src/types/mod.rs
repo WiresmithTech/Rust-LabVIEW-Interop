@@ -3,6 +3,8 @@
 
 pub mod array;
 mod boolean;
+#[cfg(target_pointer_width = "64")]
+mod lv_errors;
 pub mod string;
 pub mod timestamp;
 
@@ -13,6 +15,8 @@ use crate::memory::UHandle;
 //surface some of the common types.
 pub use array::{LVArray, LVArrayHandle};
 pub use boolean::LVBool;
+#[cfg(target_pointer_width = "64")]
+pub use lv_errors::{ErrorClusterPtr, ToLvError};
 pub use string::LStrHandle;
 pub use timestamp::LVTime;
 
