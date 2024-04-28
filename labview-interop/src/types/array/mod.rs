@@ -2,6 +2,9 @@
 //!
 //! todo: empty array can be an null handle. Detect and use.
 
+#[cfg(feature = "ndarray")]
+mod ndarray;
+
 use crate::labview_layout;
 use crate::memory::UHandle;
 
