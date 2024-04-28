@@ -4,6 +4,8 @@
 ### Features
 
 * Added support for error clusters.
+* Added support for NDArray Views (behind the `ndarray` feature flag).
+* Added numeric array resizing.
 
 ### Fixes
 

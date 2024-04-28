@@ -16,6 +16,7 @@ impl From<i32> for MgErr {
 impl MgErr {
     pub const NO_ERROR: MgErr = MgErr(0);
     pub const INTEROP_ERROR: MgErr = MgErr(-1);
+    pub const MEMORY_FULL: MgErr = MgErr(2);
     pub fn to_result<T>(self, success_value: T) -> Result<T> {
         if self.0 != 0 {
             Err(self.into())
@@ -27,6 +28,7 @@ impl MgErr {
     fn get_description(&self) -> &'static str {
         match self.0 {
             0 => "No Error",
+            2 => "Memory Full",
             _ => "No Description for Code",
         }
     }

@@ -15,7 +15,7 @@ use crate::{
 /// Represents as UHandle passed by value. Can't use the generic
 /// version from the memory module else since the functions
 /// aren't generic.
-type UHandleValue = usize;
+pub(crate) type UHandleValue = usize;
 
 #[ctor]
 static SYNC_API: Option<Container<SyncApi>> = unsafe { Container::load_self().ok() };
@@ -43,4 +43,11 @@ pub struct SyncApi {
 pub struct MemoryApi {
     #[dlopen2_name = "DSSetHandleSize"]
     set_handle_size: unsafe extern "C" fn(handle: UHandleValue, size: usize) -> MgErr,
+    #[dlopen2_name = "NumericArrayResize"]
+    numeric_array_resize: unsafe extern "C" fn(
+        type_code: i32,
+        number_of_dims: i32,
+        handle_ptr: *mut UHandleValue,
+        total_new_size: usize,
+    ) -> MgErr,
 }
