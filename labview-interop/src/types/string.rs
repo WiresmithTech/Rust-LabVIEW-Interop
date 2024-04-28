@@ -88,10 +88,13 @@ impl LStr {
     ///
     /// # Example
     /// ```
+    /// use labview_interop::types::LStrHandle;
+    /// use labview_interop::errors::MgErr;
     /// #[no_mangle]
     /// pub extern "C" fn string_check(mut string: LStrHandle) -> MgErr {
     ///    let string_value = string.to_string();
     ///    format!("Read value: {string_value}");
+    ///    MgErr::NO_ERROR
     /// }
     //```
     pub fn to_rust_string(&self) -> Cow<str> {
@@ -133,6 +136,8 @@ impl LStrHandle {
     ///
     /// # Example
     /// ```
+    /// use labview_interop::types::LStrHandle;
+    /// use labview_interop::errors::MgErr;
     /// #[no_mangle]
     /// pub extern "C" fn hello_world(mut string: LStrHandle) -> MgErr {
     ///    let result = string.set(b"Hello World");

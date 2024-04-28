@@ -29,7 +29,7 @@ type LVUserEventRef = MagicCookie;
 ///    let result = event.post(&mut 3);
 ///    match result {
 ///        Ok(_) => MgErr::NO_ERROR,
-///        Err(err) => err,
+///        Err(err) => err.into(),
 ///    }
 ///}
 /// ```
@@ -60,14 +60,14 @@ impl<T> LVUserEvent<T> {
 ///
 /// # Example
 /// ```
-/// # use labview_interop::sync::LVUserEvent;
+/// # use labview_interop::sync::Occurence;
 /// # use labview_interop::errors::MgErr;
 /// #[no_mangle]
 ///pub extern "C" fn generate_occurence(occurence: *mut Occurence) -> MgErr {
 ///    let result = unsafe { (*occurence).set() };
 ///    match result {
 ///        Ok(_) => MgErr::NO_ERROR,
-///        Err(err) => err,
+///        Err(err) => err.into(),
 ///    }
 ///}
 /// ```
