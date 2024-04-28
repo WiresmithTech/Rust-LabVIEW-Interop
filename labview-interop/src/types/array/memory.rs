@@ -1,9 +1,9 @@
 //! Memory manager functions for arrays.
 
-use super::{LvArrayDims, LVArrayHandle};
+use super::{LVArrayHandle, LvArrayDims};
 use crate::errors::Result;
 
-trait NumericArrayResizable {
+pub trait NumericArrayResizable {
     /// The code used by the LabVIEW memory manager to represent the type.
     const TYPE_CODE: i32;
 }
@@ -51,19 +51,21 @@ impl NumericArrayResizable for f64 {
 impl<const D: usize, T: NumericArrayResizable> LVArrayHandle<D, T> {
     /// Resize the array to the new size.
     pub fn resize_array(&mut self, new_dims: LvArrayDims<D>) -> Result<()> {
+        // Check if they match so resize isn't needed.
+        // We can't perform this unaligned read on 32 bit so skip it.
+        #[cfg(target_pointer_width = "64")]
         if new_dims == self.dim_sizes {
             return Ok(());
         }
 
         let new_size = new_dims.element_count();
         let mg_err = unsafe {
-            crate::labview::memory_api()?
-                .numeric_array_resize(
-                    T::TYPE_CODE,
-                    D as i32,
-                    self as *mut LVArrayHandle<D, T> as *mut usize as *mut crate::labview::UHandleValue,
-                    new_size,
-                )
+            crate::labview::memory_api()?.numeric_array_resize(
+                T::TYPE_CODE,
+                D as i32,
+                self as *mut LVArrayHandle<D, T> as *mut usize as *mut crate::labview::UHandleValue,
+                new_size,
+            )
         };
         let result = mg_err.to_result(());
 

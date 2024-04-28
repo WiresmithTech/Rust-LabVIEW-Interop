@@ -56,6 +56,23 @@ pub extern "C" fn extract_from_array(
     }
 }
 
+#[no_mangle]
+pub extern "C" fn resize_array(mut array_handle: LVArrayHandle<2, f64>) -> MgErr {
+    let result = array_handle.resize_array([3, 3].into());
+
+    match result {
+        Ok(()) => {
+            for index in 0..9 {
+                unsafe {
+                    array_handle.set_value_unchecked(index, index as f64);
+                }
+            }
+            MgErr::NO_ERROR
+        }
+        Err(e) => e.into(),
+    }
+}
+
 labview_layout!(
     pub struct TestStruct {
         one: u8,

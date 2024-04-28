@@ -6,6 +6,7 @@
 * Added support for error clusters.
 * Added support for NDArray Views (behind the `ndarray` feature flag).
 * Added numeric array resizing.
+* Added an unsafe set method to set array values on 32 bit.
 
 ### Fixes
 

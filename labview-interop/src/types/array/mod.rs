@@ -2,10 +2,10 @@
 //!
 //! todo: empty array can be an null handle. Detect and use.
 
-#[cfg(feature = "ndarray")]
-mod ndarray;
 #[cfg(feature = "link")]
 mod memory;
+#[cfg(feature = "ndarray")]
+mod ndarray;
 
 use crate::labview_layout;
 use crate::memory::UHandle;
@@ -75,13 +75,27 @@ impl<const D: usize, T> LVArray<D, T> {
 
         //self.data[index]
     }
+
+    /// Set the value at the index. This is an unsafe method used on 32 bit targets
+    /// where the packed structure means we cannot access a slice.
+    ///
+    /// On 64 bit targets use [`LVArray::data_as_slice_mut`] instead.
+    ///
+    /// # Safety
+    ///
+    /// If the index is out of range then it is undefined behaviour.
+    pub unsafe fn set_value_unchecked(&mut self, index: usize, value: T) {
+        let data_ptr = std::ptr::addr_of_mut!(self.data) as *mut T;
+        let element_ptr = data_ptr.add(index);
+        std::ptr::write_unaligned(element_ptr, value);
+    }
 }
 
 #[cfg(target_pointer_width = "64")]
 impl<const D: usize, T> LVArray<D, T> {
     /// Get the total number of elements in the array across all dimensions.
     pub fn element_count(&self) -> usize {
-       self.dim_sizes.element_count()
+        self.dim_sizes.element_count()
     }
 
     /// Get the data component as a slice.

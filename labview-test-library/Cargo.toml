@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-labview-interop = {path = "../labview-interop" }
+labview-interop = {path = "../labview-interop", features = ["link"] }
 
 [lib]
 crate-type = ["cdylib"]
