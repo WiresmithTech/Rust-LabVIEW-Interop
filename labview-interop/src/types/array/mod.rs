@@ -1,6 +1,5 @@
 //! The arrays module covers LabVIEW multidimensional array.
 //!
-//! todo: empty array can be an null handle. Detect and use.
 
 #[cfg(feature = "link")]
 mod memory;
@@ -46,18 +45,33 @@ labview_layout!(
 ///
 /// It is copy only as we must copy out of the pointers.
 impl<const D: usize, T> LVArray<D, T> {
-    /// Get the data size. Works with the packed structures found in the 32 bit interface.
-    pub fn get_data_size(&self) -> usize {
-        let mut size: usize = 1;
+    /// Get the dimensions of the array.
+    #[cfg(target_pointer_width = "32")]
+    pub fn dimension_sizes(&self) -> LvArrayDims<D> {
+        // This 32 bit version must make potentially unaligned accesses in the structure
+        // so this is a little more convoluted.
+        // Because these lead the struct they should infact always be aligned.
+        let mut dimensions = [0i32; D];
 
-        for index in 0..D {
+        for (index, value) in dimensions.iter_mut().enumerate() {
             let element_ptr = std::ptr::addr_of!(self.dim_sizes.0[index]);
             // Safety: the indexes must be in range due to the const generic value.
             let dim_size = unsafe { std::ptr::read_unaligned(element_ptr) };
-            size *= dim_size as usize;
+            *value = dim_size;
         }
 
-        size
+        dimensions.into()
+    }
+
+    /// Get the dimensions of the array.
+    #[cfg(target_pointer_width = "64")]
+    pub fn dimension_sizes(&self) -> LvArrayDims<D> {
+        self.dim_sizes
+    }
+
+    /// Get the total number of elements in the array across all dimensions.
+    pub fn element_count(&self) -> usize {
+        self.dimension_sizes().element_count()
     }
 
     /// Get the value directly from the array. This is an unsafe method used on
@@ -93,11 +107,6 @@ impl<const D: usize, T> LVArray<D, T> {
 
 #[cfg(target_pointer_width = "64")]
 impl<const D: usize, T> LVArray<D, T> {
-    /// Get the total number of elements in the array across all dimensions.
-    pub fn element_count(&self) -> usize {
-        self.dim_sizes.element_count()
-    }
-
     /// Get the data component as a slice.
     ///
     /// Note: for muti-dimension arrays this is a raw structure so you will

@@ -4,7 +4,7 @@ use labview_interop::sync::{LVUserEvent, Occurence};
 use labview_interop::types::string::LStrHandle;
 #[cfg(target_pointer_width = "64")]
 use labview_interop::types::{ErrorClusterPtr, ToLvError};
-use labview_interop::types::{LVArrayHandle, LVTime, LVVariant, Waveform};
+use labview_interop::types::{LVArrayHandle, LVBool, LVTime, LVVariant, Waveform};
 
 use std::ffi::{c_char, CStr};
 use std::ptr::{addr_of, read_unaligned};
@@ -50,7 +50,7 @@ pub extern "C" fn extract_from_array(
 ) {
     unsafe {
         let array_data = array_handle.as_ref().unwrap();
-        let element_count = array_data.get_data_size();
+        let element_count = array_data.element_count();
         *first = array_data.get_value_unchecked(0);
         *last = array_data.get_value_unchecked(element_count - 1);
     }
@@ -71,6 +71,13 @@ pub extern "C" fn resize_array(mut array_handle: LVArrayHandle<2, f64>) -> MgErr
         }
         Err(e) => e.into(),
     }
+}
+
+#[no_mangle]
+pub extern "C" fn is_array_empty(array_handle: LVArrayHandle<1, f64>, empty: *mut LVBool) -> MgErr {
+    let size = array_handle.element_count();
+    unsafe { *empty = (size == 0).into() }
+    MgErr::NO_ERROR
 }
 
 labview_layout!(
@@ -125,7 +132,7 @@ pub extern "C" fn extract_test_struct_with_waveform(
         *two = (*test_struct).two;
         *three = (*test_struct).three;
         *wv_first = waveform_data.get_value_unchecked(0);
-        *wv_last = waveform_data.get_value_unchecked(waveform_data.get_data_size() - 1);
+        *wv_last = waveform_data.get_value_unchecked(waveform_data.element_count() - 1);
     });
 }
 
@@ -240,7 +247,6 @@ pub extern "C" fn set_error_cluster(error_cluster: ErrorClusterPtr) -> MgErr {
 }
 
 pub fn test() {
-    use std::ptr::{addr_of, read_unaligned};
     labview_layout!(
         pub struct TestStruct {
             one: u8,
@@ -260,6 +266,6 @@ pub fn test() {
 
     unsafe {
         let three_ptr: *const u32 = addr_of!(value.three);
-        let three: u32 = read_unaligned(three_ptr);
+        let _three: u32 = read_unaligned(three_ptr);
     }
 }
