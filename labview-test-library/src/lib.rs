@@ -56,6 +56,30 @@ pub extern "C" fn extract_from_array(
     }
 }
 
+#[cfg(target_pointer_width = "64")]
+#[no_mangle]
+pub extern "C" fn extract_from_array_ndarray(
+    array_handle: LVArrayHandle<2, f64>,
+    end_of_first_row: *mut f64,
+    start_of_last_row: *mut f64,
+) {
+    let array = array_handle.ndarray_view();
+    let rows = array.nrows();
+    let columns = array.ncols();
+    unsafe {
+        *end_of_first_row = array.get([0, columns - 1]).unwrap().clone();
+        *start_of_last_row = array.get([rows - 1, 0]).unwrap().clone();
+    }
+}
+
+#[cfg(target_pointer_width = "64")]
+#[no_mangle]
+pub extern "C" fn copy_from_ndarray(mut array_handle: LVArrayHandle<2, i32>) -> MgErr {
+    let ndarray = ndarray::arr2(&[[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+    let result = array_handle.copy_from_ndarray(&ndarray);
+    result.into()
+}
+
 #[no_mangle]
 pub extern "C" fn resize_array(mut array_handle: LVArrayHandle<2, f64>) -> MgErr {
     let result = array_handle.resize_array([3, 3].into());

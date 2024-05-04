@@ -1,79 +1,77 @@
-//! NDArray support for the LabVIEW array types.
+//! NDArray support for the LabVIEW array types. This requires 64 bit to
+//! access internal array elements.
 
-use super::LVArray;
+use super::memory::NumericArrayResizable;
+use super::{LVArray, LVArrayHandle};
+use crate::errors::Result;
 use ndarray::{ArrayView, ArrayViewMut, Dim, Ix};
 
+macro_rules! array_with_dim {
+    ($dim:literal) => {
+        impl<T> LVArray<$dim, T> {
+            /// Get the dimensions in the NDArray format.
+            fn ndarray_dim(&self) -> Dim<[Ix; $dim]> {
+                let sizes: [Ix; $dim] = self.dim_sizes.into();
+                Dim(sizes)
+            }
 
-impl<const D: usize, T> LVArray<D, T> {
+            /// Get the LabVIEW array as an NDArray view.
+            pub fn ndarray_view(&self) -> ArrayView<T, Dim<[Ix; $dim]>> {
+                let dim_sizes = self.ndarray_dim();
+                let data = self.data_as_slice();
+                ArrayView::from_shape(dim_sizes, data).unwrap()
+            }
 
-    /// Get the dimensions in the NDArray format.
-    fn ndarray_dim(&self) -> Dim<[Ix; D]> {
-        let mut usize_dims = [0usize; D];
-        usize_dims.iter_mut().zip(self.dim_sizes.iter()).for_each(|(usize_dim, dim)| {
-            *usize_dim = *dim as usize;
-        });
-        usize_dims.into()
-    }
+            /// Get the LabVIEW array as an NDArray mutable view.
+            pub fn ndarray_view_mut(&mut self) -> ArrayViewMut<T, Dim<[Ix; $dim]>> {
+                let dim_sizes = self.ndarray_dim();
+                let data = self.data_as_slice_mut();
+                ArrayViewMut::from_shape(dim_sizes, data).unwrap()
+            }
+        }
 
-    /// Get the LabVIEW array as an NDArray view.
-    pub fn ndarray_view(&self) -> ArrayView<T, Dim<[Ix; D]>> {
-        let dim_sizes = self.ndarray_dim();
-        let data = self.data_as_slice();
-        ArrayView::from_shape(dim_sizes.into(), data).unwrap()
-    }
+        // Implement the copy methods.
+        impl<'array, T: Copy + NumericArrayResizable + 'array> LVArrayHandle<$dim, T> {
+            /// Set the LabVIEW array from the ND Array.
+            ///
+            /// It will resize the array to match the dimensions if required.
+            pub fn copy_from_ndarray(
+                &mut self,
+                array: impl Into<ArrayView<'array, T, Dim<[Ix; $dim]>>>,
+            ) -> Result<()> {
+                self.copy_from_ndarray_view(array.into())
+            }
 
-    /// Get the LabVIEW array as an NDArray mutable view.
-    pub fn ndarray_view_mut(&mut self) -> ArrayViewMut<T, Dim<[Ix; D]>> {
-        let dim_sizes = self.ndarray_dim();
-        let data = self.data_as_slice_mut();
-        ArrayViewMut::from_shape(dim_sizes.into(), data).unwrap()
-    }
+            fn copy_from_ndarray_view(
+                &mut self,
+                array: ArrayView<'array, T, Dim<[Ix; $dim]>>,
+            ) -> Result<()> {
+                // If the size isn't right either resize if available or error.
+                if array.raw_dim() != self.ndarray_dim() {
+                    #[cfg(feature = "link")]
+                    {
+                        self.resize_array(array.shape().try_into()?)?;
+                    }
+                    #[cfg(not(feature = "link"))]
+                    {
+                        return Err(LVInteropError::ArrayDimensionMismatch);
+                    }
+                }
 
-
+                let lv_array = unsafe { self.as_ref_mut()? };
+                for (output, input) in lv_array.data_as_slice_mut().iter_mut().zip(array.iter()) {
+                    *output = *input
+                }
+                Ok(())
+            }
+        }
+    };
 }
 
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-    use ndarray::{arr2, ArrayView1};
-
-    #[test]
-    fn test_ndarray_view() {
-        let array = LVArray::<2, i32> {
-            dim_sizes: [2, 3],
-            data: *[1, 2, 3, 4, 5, 6],
-        };
-
-        let view = array.ndarray_view();
-        let expected = arr2(&[[1, 2, 3], [4, 5, 6]]);
-        assert_eq!(view, expected.view());
-    }
-
-    #[test]
-    fn test_ndarray_view_mut() {
-        let mut array = LVArray::<2, i32> {
-            dim_sizes: [2, 3],
-            data: *[1, 2, 3, 4, 5, 6],
-        };
-
-        let mut view = array.ndarray_view_mut();
-        view[[0, 0]] = 10;
-        view[[1, 2]] = 20;
-
-        let mut expected = arr2(&[[10, 2, 3], [4, 5, 20]]);
-        assert_eq!(view, expected.view_mut());
-    }
-
-    #[test]
-    fn test_1d_array_view() {
-        let array = LVArray::<1, i32> {
-            dim_sizes: [3],
-            data: *[1, 2, 3],
-        };
-
-        let view = array.ndarray_view();
-        let expected = ArrayView1::from(&[1, 2, 3]);
-        assert_eq!(view, expected);
-    }
-}
+// NDarray only supports 6 const dims.
+array_with_dim!(1);
+array_with_dim!(2);
+array_with_dim!(3);
+array_with_dim!(4);
+array_with_dim!(5);
+array_with_dim!(6);

@@ -54,6 +54,12 @@ pub enum LVInteropError {
     InvalidHandle,
     #[error("LabVIEW API unavailable. Probably because it isn't being run in LabVIEW")]
     NoLabviewApi,
+    #[error("LabVIEW arrays can only have dimensions of i32 range.")]
+    ArrayDimensionsOutOfRange,
+    #[error(
+        "Array dimensions don't match. You may require the link feature to enable auto-resizing."
+    )]
+    ArrayDimensionMismatch,
 }
 
 pub type Result<T> = std::result::Result<T, LVInteropError>;
@@ -64,6 +70,8 @@ impl From<LVInteropError> for MgErr {
             LVInteropError::LabviewError(err) => err,
             LVInteropError::InvalidHandle => MgErr::INTEROP_ERROR,
             LVInteropError::NoLabviewApi => MgErr(-2),
+            LVInteropError::ArrayDimensionsOutOfRange => MgErr(-3),
+            LVInteropError::ArrayDimensionMismatch => MgErr(-3),
         }
     }
 }

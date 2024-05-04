@@ -1,6 +1,6 @@
 //! Memory manager functions for arrays.
 
-use super::{LVArrayHandle, LvArrayDims};
+use super::{LVArrayDims, LVArrayHandle};
 use crate::errors::Result;
 
 pub trait NumericArrayResizable {
@@ -50,7 +50,7 @@ impl NumericArrayResizable for f64 {
 
 impl<const D: usize, T: NumericArrayResizable> LVArrayHandle<D, T> {
     /// Resize the array to the new size.
-    pub fn resize_array(&mut self, new_dims: LvArrayDims<D>) -> Result<()> {
+    pub fn resize_array(&mut self, new_dims: LVArrayDims<D>) -> Result<()> {
         // Check if they match so resize isn't needed.
         // We can't perform this unaligned read on 32 bit so skip it.
         #[cfg(target_pointer_width = "64")]
