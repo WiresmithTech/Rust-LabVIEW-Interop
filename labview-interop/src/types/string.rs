@@ -30,7 +30,7 @@ fn get_encoding() -> &'static Encoding {
     encoding_rs::WINDOWS_1252
 }
 
-#[cfg(target_os = "mac")]
+#[cfg(target_os = "macos")]
 fn get_encoding() -> &'static Encoding {
     encoding_rs::UTF_8
 }
