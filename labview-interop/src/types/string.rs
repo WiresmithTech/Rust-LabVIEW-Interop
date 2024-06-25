@@ -138,6 +138,46 @@ impl PartialEq for LStr {
 /// Requires the link feature.
 #[cfg(feature = "link")]
 impl LStrHandle {
+    pub fn from_lstr(lstr_in: &LStr) -> Result<Self> {
+        let handle = UHandle::<LStr>::new(lstr_in.size())?;
+        unsafe {
+            let l_str = handle.as_ref_mut()?;
+            l_str.size = lstr_in.size;
+            std::ptr::copy_nonoverlapping(
+                lstr_in.data.as_ptr(),
+                l_str.data.as_mut_ptr(),
+                l_str.size as usize,
+            );
+        }
+
+        Ok(handle)
+    }
+
+    ///
+    /// # Example
+    /// ```
+    /// use labview_interop::types::{LStr, LStrHandle};
+    /// use labview_interop::errors::MgErr;
+    /// #[no_mangle]
+    /// pub extern "C" fn hello_world(mut strn: String) -> LStrHandle {
+    ///    let handle = LStrHandle<LStr>::from_data(strn.as_bytes()).unwrap(); // is == UHandle<LStr>
+    ///    handle
+    /// }
+    /// ```
+    pub fn from_data(data: &[u8]) -> Result<Self> {
+        let handle = UHandle::<LStr>::new(LStr::size_with_data(data))?;
+        unsafe {
+            let l_str = handle.as_ref_mut()?;
+            l_str.size = data.len() as i32;
+            std::ptr::copy_nonoverlapping(
+                data.as_ptr(),
+                l_str.data.as_mut_ptr(),
+                l_str.size as usize,
+            );
+        }
+
+        Ok(handle)
+    }
     /// Set the string as a binary value against the handle.
     ///
     /// This function will resize the handle based on the size of the input value.

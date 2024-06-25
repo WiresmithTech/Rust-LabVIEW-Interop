@@ -139,6 +139,20 @@ impl<T: ?Sized> DerefMut for UHandle<T> {
 
 #[cfg(feature = "link")]
 impl<T: ?Sized> UHandle<T> {
+    /// Get a new handle, allocated by the labview memory manager
+    ///
+    /// # Safety
+    ///
+    /// * The new handle is created by the LabVIEW Memory Manager, we just store the ptr in UHandle
+    pub fn new(size: usize) -> Result<Self> {
+        let handle_ptr = unsafe { crate::labview::memory_api()?.new_handle(size) as *mut *mut T };
+        if handle_ptr.is_null() {
+            Err(LVInteropError::InvalidHandle)
+        } else {
+            Ok(UHandle(handle_ptr))
+        }
+    }
+
     /// Resize the handle to the desired size.
     ///
     /// # Safety

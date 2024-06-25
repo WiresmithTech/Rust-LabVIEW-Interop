@@ -41,6 +41,8 @@ pub struct SyncApi {
 
 #[derive(WrapperApi)]
 pub struct MemoryApi {
+    #[dlopen2_name = "DSNewHandle"]
+    new_handle: unsafe extern "C" fn(size: usize) -> *mut *mut std::ffi::c_void,
     #[dlopen2_name = "DSSetHandleSize"]
     set_handle_size: unsafe extern "C" fn(handle: UHandleValue, size: usize) -> MgErr,
     #[dlopen2_name = "NumericArrayResize"]
