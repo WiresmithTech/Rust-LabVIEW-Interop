@@ -72,6 +72,18 @@ impl LStr {
         unsafe { std::slice::from_raw_parts_mut(self.data.as_mut_ptr(), self.size as usize) }
     }
 
+    /// Get the size of this LStr instance.
+    /// Would LStr ever be padded?
+    pub fn size(&self) -> usize {
+        std::mem::size_of::<i32>() + self.data.len()
+    }
+
+    /// Get the size of LStr given a specific data slice.
+    /// Would LStr ever be padded?
+    pub fn size_with_data(data: &[u8]) -> usize {
+        std::mem::size_of::<i32>() + data.len()
+    }
+
     /// Uses a system appropriate decoder to return a rust compatible string.
     ///
     /// This returns a [`std::borrow::Cow`] to avoid any allocations if the
@@ -146,11 +158,11 @@ impl LStrHandle {
     //```
     pub fn set(&mut self, value: &[u8]) -> Result<()> {
         let input_length = value.len();
+        let struct_size = LStr::size_with_data(value);
 
         unsafe {
             //Safety: Is this alignment ever wrong. Would it even pad between the size and data.
             // I believe not.
-            let struct_size = input_length + 4;
             self.resize(struct_size)?;
 
             let l_str = self.as_ref_mut()?;
