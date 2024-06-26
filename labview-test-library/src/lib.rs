@@ -1,5 +1,6 @@
 use labview_interop::errors::MgErr;
 use labview_interop::labview_layout;
+use labview_interop::memory::UPtr;
 use labview_interop::sync::{LVUserEvent, Occurence};
 use labview_interop::types::string::LStrHandle;
 #[cfg(target_pointer_width = "64")]
@@ -213,6 +214,36 @@ pub extern "C" fn extract_cluster_variant(
 pub extern "C" fn generate_event_3(lv_user_event: *mut LVUserEvent<i32>) -> MgErr {
     let event = unsafe { *lv_user_event };
     let result = event.post(&mut 3);
+    result.into()
+}
+
+labview_layout!(
+    pub struct UserEventCluster {
+        eventno: i32,
+        id: LStrHandle,
+    }
+);
+
+#[no_mangle]
+pub extern "C" fn update_cluster(cluster: UPtr<UserEventCluster>) -> MgErr {
+    let clust = unsafe { cluster.as_ref_mut().unwrap() };
+    clust.eventno = 5;
+    clust.id.set("This is the new string".as_bytes()).unwrap();
+
+    MgErr::NO_ERROR
+}
+
+#[no_mangle]
+pub extern "C" fn generate_event_cluster(
+    lv_user_event: UPtr<LVUserEvent<UserEventCluster>>,
+) -> MgErr {
+    let mystr = LStrHandle::from_data("this is a string".as_bytes()).unwrap();
+    let mut eventdata = UserEventCluster {
+        eventno: 2,
+        id: mystr,
+    };
+    let result = lv_user_event.post(&mut eventdata);
+
     result.into()
 }
 
