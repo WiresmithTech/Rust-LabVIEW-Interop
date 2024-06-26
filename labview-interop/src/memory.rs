@@ -12,6 +12,10 @@ use crate::errors::{LVInteropError, Result};
 pub struct UPtr<T: ?Sized>(*mut T);
 
 impl<T: ?Sized> UPtr<T> {
+    /// Create a new UPtr from a raw pointer
+    pub fn new(ptr: *mut T) -> Self {
+        Self(ptr)
+    }
     /// Get a reference to the internal type. Errors if the pointer is null.
     ///
     /// # Safety
@@ -72,7 +76,7 @@ impl<T: ?Sized> DerefMut for UPtr<T> {
 /// A handle is a double pointer so the underlying
 /// data can be resized and moved.
 #[repr(transparent)]
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Clone, Debug)]
 pub struct UHandle<T: ?Sized>(pub *mut *mut T);
 
 impl<T: ?Sized> UHandle<T> {
@@ -161,6 +165,16 @@ impl<T: ?Sized> UHandle<T> {
     pub unsafe fn resize(&mut self, desired_size: usize) -> Result<()> {
         let err = crate::labview::memory_api()?.set_handle_size(self.0 as usize, desired_size);
         err.to_result(())
+    }
+}
+
+impl<T: ?Sized> Drop for UHandle<T> {
+    fn drop(&mut self) {
+        let _err = unsafe {
+            crate::labview::memory_api()
+                .unwrap()
+                .dispose_handle(self.0 as usize)
+        };
     }
 }
 
