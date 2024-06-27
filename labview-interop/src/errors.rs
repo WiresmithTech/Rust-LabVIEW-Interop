@@ -1,439 +1,189 @@
 use std::{error::Error, fmt::Display};
 use thiserror::Error;
 
-#[derive(Debug)]
-#[repr(i32)]
-pub enum MgErrCode {
-    Ok = 0,
-    MgArgErr = 1,
-    MFullErr = 2,
-    FEof = 4,
-    FIsOpen = 5,
-    FIoErr = 6,
-    FNotFound = 7,
-    FNoPerm = 8,
-    FDiskFull = 9,
-    FDupPath = 10,
-    FtMFOpen = 11,
-    FNotEnabled = 12,
-    RfNotFound = 13,
-    RAddFailed = 14,
-    RNotFound = 15,
-    INotFound = 16,
-    IMemoryErr = 17,
-    DPenNotExist = 18,
-    CfgBadType = 19,
-    CfgTokenNotFound = 20,
-    CfgParseError = 21,
-    CfgAllocError = 22,
-    EcLVSBFormatError = 23,
-    EcLVSBSubrError = 24,
-    EcLVSBNoCodeError = 25,
-    WNullWindow = 26,
-    WDestroyMixup = 27,
-    MenuNullMenu = 28,
-    PAbortJob = 29,
-    PBadPrintRecord = 30,
-    PDriverError = 31,
-    PWindowsError = 32,
-    PMemoryError = 33,
-    PDialogError = 34,
-    PMiscError = 35,
-    DvInvalidRefnum = 36,
-    DvDeviceNotFound = 37,
-    DvParamErr = 38,
-    DvUnitErr = 39,
-    DvOpenErr = 40,
-    DvAbortErr = 41,
-    BogusError = 42,
-    CancelError = 43,
-    OMObjLowErr = 44,
-    OMObjHiErr = 45,
-    OMObjNotInHeapErr = 46,
-    OMOHeapNotKnownErr = 47,
-    OMBadDPIdErr = 48,
-    OMNoDPinTabErr = 49,
-    OMMsgOutOfRangeErr = 50,
-    OMMethodNullErr = 51,
-    OMUnknownMsgErr = 52,
-    MgNotSupported = 53,
-    NcBadAddressErr = 54,
-    NcInProgress = 55,
-    NcTimeOutErr = 56,
-    NcBusyErr = 57,
-    NcNotSupportedErr = 58,
-    NcNetErr = 59,
-    NcAddrInUseErr = 60,
-    NcSysOutOfMem = 61,
-    NcSysConnAbortedErr = 62,
-    NcConnRefusedErr = 63,
-    NcNotConnectedErr = 64,
-    NcAlreadyConnectedErr = 65,
-    NcConnClosedErr = 66,
-    AmInitErr = 67,
-    OccBadOccurrenceErr = 68,
-    OccWaitOnUnBoundHdlrErr = 69,
-    OccFunnyQOverFlowErr = 70,
-    FDataLogTypeConflict = 71,
-    EcLVSBCannotBeCalledFromThread = 72,
-    AmUnrecognizedType = 73,
-    MCorruptErr = 74,
-    EcLVSBErrorMakingTempDLL = 75,
-    EcLVSBOldCIN = 76,
-    FmtTypeMismatch = 81,
-    FmtUnknownConversion = 82,
-    FmtTooFew = 83,
-    FmtTooMany = 84,
-    FmtScanError = 85,
-    LvOLEConvertErr = 87,
-    RtMenuErr = 88,
-    PwdTampered = 89,
-    LvVariantAttrNotFound = 90,
-    LvVariantTypeMismatch = 91,
-    AxEventDataNotAvailable = 92,
-    AxEventStoreNotPresent = 93,
-    AxOccurrenceNotFound = 94,
-    AxEventQueueNotCreated = 95,
-    AxEventInfoNotAvailable = 96,
-    OleNullRefnumPassed = 97,
-    IviInvalidDowncast = 102,
-    IviInvalidClassSesn = 103,
-    NcSockNotMulticast = 108,
-    NcSockNotSinglecast = 109,
-    NcBadMulticastAddr = 110,
-    NcMcastSockReadOnly = 111,
-    NcMcastSockWriteOnly = 112,
-    NcDatagramMsgSzErr = 113,
-    DataCorruptErr = 116,
-    RequireFullPathErr = 117,
-    FolderNotExistErr = 118,
-    NcBtInvalidModeErr = 119,
-    NcBtSetModeErr = 120,
-    MgBtInvalidGUIDStrErr = 121,
-    RVersInFuture = 122,
+use num_enum::{IntoPrimitive, TryFromPrimitive};
+use std::convert::TryFrom;
+// Macro to define the enum and implement the conversions
+macro_rules! define_errors {
+    ($(($name:ident, $code:expr, $msg:expr)),*) => {
+        #[derive(Debug, IntoPrimitive, TryFromPrimitive)]
+        #[repr(i32)]
+        pub enum MgErrorCode {
+            $(
+                $name = $code,
+            )*
+        }
+
+        #[derive(Debug, Error)]
+        pub enum MgError {
+            $(
+                #[error($msg)]
+                $name,
+            )*
+        }
+
+        impl From<MgErrorCode> for MgError {
+            fn from(code: MgErrorCode) -> Self {
+                match code {
+                    $(
+                        MgErrorCode::$name => MgError::$name,
+                    )*
+                }
+            }
+        }
+
+        impl From<MgError> for MgErrorCode {
+            fn from(error: MgError) -> Self {
+                match error {
+                    $(
+                        MgError::$name => MgErrorCode::$name,
+                    )*
+                }
+            }
+        }
+    };
 }
 
-// halucination based of the error code names by chatgpt4o
-// not sure if there are official descriptions anywhere available
-#[derive(Debug, Error)]
-pub enum MgError {
-    #[error("Argument Error")]
-    MgArgErr,
-
-    #[error("Memory Full Error")]
-    MFullErr,
-
-    #[error("File End of File")]
-    FEof,
-
-    #[error("File is Open")]
-    FIsOpen,
-
-    #[error("File I/O Error")]
-    FIoErr,
-
-    #[error("File Not Found")]
-    FNotFound,
-
-    #[error("File No Permission")]
-    FNoPerm,
-
-    #[error("File Disk Full")]
-    FDiskFull,
-
-    #[error("File Duplicate Path")]
-    FDupPath,
-
-    #[error("File Table Memory Full")]
-    FtMFOpen,
-
-    #[error("File Not Enabled")]
-    FNotEnabled,
-
-    #[error("Reference Not Found")]
-    RfNotFound,
-
-    #[error("Resource Addition Failed")]
-    RAddFailed,
-
-    #[error("Resource Not Found")]
-    RNotFound,
-
-    #[error("Item Not Found")]
-    INotFound,
-
-    #[error("I Memory Error")]
-    IMemoryErr,
-
-    #[error("Dependency Not Exist")]
-    DPenNotExist,
-
-    #[error("Configuration Bad Type")]
-    CfgBadType,
-
-    #[error("Configuration Token Not Found")]
-    CfgTokenNotFound,
-
-    #[error("Configuration Parse Error")]
-    CfgParseError,
-
-    #[error("Configuration Allocation Error")]
-    CfgAllocError,
-
-    #[error("LVSB Format Error")]
-    EcLVSBFormatError,
-
-    #[error("LVSB Subroutine Error")]
-    EcLVSBSubrError,
-
-    #[error("LVSB No Code Error")]
-    EcLVSBNoCodeError,
-
-    #[error("Null Window")]
-    WNullWindow,
-
-    #[error("Destroy Mixup")]
-    WDestroyMixup,
-
-    #[error("Null Menu")]
-    MenuNullMenu,
-
-    #[error("Abort Job")]
-    PAbortJob,
-
-    #[error("Bad Print Record")]
-    PBadPrintRecord,
-
-    #[error("Driver Error")]
-    PDriverError,
-
-    #[error("Windows Error")]
-    PWindowsError,
-
-    #[error("Memory Error")]
-    PMemoryError,
-
-    #[error("Dialog Error")]
-    PDialogError,
-
-    #[error("Miscellaneous Error")]
-    PMiscError,
-
-    #[error("Invalid Refnum")]
-    DvInvalidRefnum,
-
-    #[error("Device Not Found")]
-    DvDeviceNotFound,
-
-    #[error("Parameter Error")]
-    DvParamErr,
-
-    #[error("Unit Error")]
-    DvUnitErr,
-
-    #[error("Open Error")]
-    DvOpenErr,
-
-    #[error("Abort Error")]
-    DvAbortErr,
-
-    #[error("Bogus Error")]
-    BogusError,
-
-    #[error("Cancel Error")]
-    CancelError,
-
-    #[error("Object Manager Low Error")]
-    OMObjLowErr,
-
-    #[error("Object Manager High Error")]
-    OMObjHiErr,
-
-    #[error("Object Manager Not In Heap Error")]
-    OMObjNotInHeapErr,
-
-    #[error("Object Manager Heap Not Known Error")]
-    OMOHeapNotKnownErr,
-
-    #[error("Object Manager Bad DPId Error")]
-    OMBadDPIdErr,
-
-    #[error("Object Manager No DP In Table Error")]
-    OMNoDPinTabErr,
-
-    #[error("Object Manager Message Out Of Range Error")]
-    OMMsgOutOfRangeErr,
-
-    #[error("Object Manager Method Null Error")]
-    OMMethodNullErr,
-
-    #[error("Object Manager Unknown Message Error")]
-    OMUnknownMsgErr,
-
-    #[error("Not Supported")]
-    MgNotSupported,
-
-    #[error("Network Controller Bad Address Error")]
-    NcBadAddressErr,
-
-    #[error("In Progress")]
-    NcInProgress,
-
-    #[error("Timeout Error")]
-    NcTimeOutErr,
-
-    #[error("Busy Error")]
-    NcBusyErr,
-
-    #[error("Not Supported Error")]
-    NcNotSupportedErr,
-
-    #[error("Network Error")]
-    NcNetErr,
-
-    #[error("Address In Use Error")]
-    NcAddrInUseErr,
-
-    #[error("System Out Of Memory")]
-    NcSysOutOfMem,
-
-    #[error("System Connection Aborted Error")]
-    NcSysConnAbortedErr,
-
-    #[error("Connection Refused Error")]
-    NcConnRefusedErr,
-
-    #[error("Not Connected Error")]
-    NcNotConnectedErr,
-
-    #[error("Already Connected Error")]
-    NcAlreadyConnectedErr,
-
-    #[error("Connection Closed Error")]
-    NcConnClosedErr,
-
-    #[error("Initialization Error")]
-    AmInitErr,
-
-    #[error("Bad Occurrence Error")]
-    OccBadOccurrenceErr,
-
-    #[error("Wait On Unbound Handler Error")]
-    OccWaitOnUnBoundHdlrErr,
-
-    #[error("Funny Queue Overflow Error")]
-    OccFunnyQOverFlowErr,
-
-    #[error("Data Log Type Conflict")]
-    FDataLogTypeConflict,
-
-    #[error("LVSB Cannot Be Called From Thread")]
-    EcLVSBCannotBeCalledFromThread,
-
-    #[error("Unrecognized Type")]
-    AmUnrecognizedType,
-
-    #[error("Corrupt Error")]
-    MCorruptErr,
-
-    #[error("LVSB Error Making Temp DLL")]
-    EcLVSBErrorMakingTempDLL,
-
-    #[error("LVSB Old CIN")]
-    EcLVSBOldCIN,
-
-    #[error("Format Type Mismatch")]
-    FmtTypeMismatch,
-
-    #[error("Unknown Conversion")]
-    FmtUnknownConversion,
-
-    #[error("Too Few")]
-    FmtTooFew,
-
-    #[error("Too Many")]
-    FmtTooMany,
-
-    #[error("Scan Error")]
-    FmtScanError,
-
-    #[error("OLE Convert Error")]
-    LvOLEConvertErr,
-
-    #[error("Runtime Menu Error")]
-    RtMenuErr,
-
-    #[error("Password Tampered")]
-    PwdTampered,
-
-    #[error("Variant Attribute Not Found")]
-    LvVariantAttrNotFound,
-
-    #[error("Variant Type Mismatch")]
-    LvVariantTypeMismatch,
-
-    #[error("Event Data Not Available")]
-    AxEventDataNotAvailable,
-
-    #[error("Event Store Not Present")]
-    AxEventStoreNotPresent,
-
-    #[error("Occurrence Not Found")]
-    AxOccurrenceNotFound,
-
-    #[error("Event Queue Not Created")]
-    AxEventQueueNotCreated,
-
-    #[error("Event Info Not Available")]
-    AxEventInfoNotAvailable,
-
-    #[error("Null Refnum Passed")]
-    OleNullRefnumPassed,
-
-    #[error("Invalid Downcast")]
-    IviInvalidDowncast,
-
-    #[error("Invalid Class Session")]
-    IviInvalidClassSesn,
-
-    #[error("Socket Not Multicast")]
-    NcSockNotMulticast,
-
-    #[error("Socket Not Singlecast")]
-    NcSockNotSinglecast,
-
-    #[error("Bad Multicast Address")]
-    NcBadMulticastAddr,
-
-    #[error("Multicast Socket Read Only")]
-    NcMcastSockReadOnly,
-
-    #[error("Multicast Socket Write Only")]
-    NcMcastSockWriteOnly,
-
-    #[error("Datagram Message Size Error")]
-    NcDatagramMsgSzErr,
-
-    #[error("Data Corrupt Error")]
-    DataCorruptErr,
-
-    #[error("Require Full Path Error")]
-    RequireFullPathErr,
-
-    #[error("Folder Does Not Exist Error")]
-    FolderNotExistErr,
-
-    #[error("Bluetooth Invalid Mode Error")]
-    NcBtInvalidModeErr,
-
-    #[error("Bluetooth Set Mode Error")]
-    NcBtSetModeErr,
-
-    #[error("Bluetooth Invalid GUID String Error")]
-    MgBtInvalidGUIDStrErr,
-
-    #[error("Version In Future")]
-    RVersInFuture,
+// Define the errors using the macro
+define_errors!(
+    (MgArgErr, 1, "Argument Error"),
+    (MFullErr, 2, "Memory Full Error"),
+    (FEof, 4, "End of File"),
+    (FIsOpen, 5, "File is Open"),
+    (FIoErr, 6, "I/O Error"),
+    (FNotFound, 7, "File Not Found"),
+    (FNoPerm, 8, "No Permission"),
+    (FDiskFull, 9, "Disk Full"),
+    (FDupPath, 10, "Duplicate Path"),
+    (FtMFOpen, 11, "File Table Memory Full"),
+    (FNotEnabled, 12, "File Not Enabled"),
+    (RfNotFound, 13, "Reference Not Found"),
+    (RAddFailed, 14, "Addition Failed"),
+    (RNotFound, 15, "Resource Not Found"),
+    (INotFound, 16, "Item Not Found"),
+    (IMemoryErr, 17, "Memory Error"),
+    (DPenNotExist, 18, "Dependency Not Exist"),
+    (CfgBadType, 19, "Configuration Bad Type"),
+    (CfgTokenNotFound, 20, "Configuration Token Not Found"),
+    (CfgParseError, 21, "Configuration Parse Error"),
+    (CfgAllocError, 22, "Configuration Allocation Error"),
+    (EcLVSBFormatError, 23, "LVSB Format Error"),
+    (EcLVSBSubrError, 24, "LVSB Subroutine Error"),
+    (EcLVSBNoCodeError, 25, "LVSB No Code Error"),
+    (WNullWindow, 26, "Null Window"),
+    (WDestroyMixup, 27, "Destroy Mixup"),
+    (MenuNullMenu, 28, "Null Menu"),
+    (PAbortJob, 29, "Abort Job"),
+    (PBadPrintRecord, 30, "Bad Print Record"),
+    (PDriverError, 31, "Driver Error"),
+    (PWindowsError, 32, "Windows Error"),
+    (PMemoryError, 33, "Memory Error"),
+    (PDialogError, 34, "Dialog Error"),
+    (PMiscError, 35, "Miscellaneous Error"),
+    (DvInvalidRefnum, 36, "Invalid Refnum"),
+    (DvDeviceNotFound, 37, "Device Not Found"),
+    (DvParamErr, 38, "Parameter Error"),
+    (DvUnitErr, 39, "Unit Error"),
+    (DvOpenErr, 40, "Open Error"),
+    (DvAbortErr, 41, "Abort Error"),
+    (BogusError, 42, "Bogus Error"),
+    (CancelError, 43, "Cancel Error"),
+    (OMObjLowErr, 44, "Object Manager Low Error"),
+    (OMObjHiErr, 45, "Object Manager High Error"),
+    (OMObjNotInHeapErr, 46, "Object Manager Not In Heap Error"),
+    (
+        OMOHeapNotKnownErr,
+        47,
+        "Object Manager Heap Not Known Error"
+    ),
+    (OMBadDPIdErr, 48, "Object Manager Bad DPId Error"),
+    (OMNoDPinTabErr, 49, "Object Manager No DP In Table Error"),
+    (
+        OMMsgOutOfRangeErr,
+        50,
+        "Object Manager Message Out Of Range Error"
+    ),
+    (OMMethodNullErr, 51, "Object Manager Method Null Error"),
+    (OMUnknownMsgErr, 52, "Object Manager Unknown Message Error"),
+    (MgNotSupported, 53, "Not Supported"),
+    (NcBadAddressErr, 54, "Network Controller Bad Address Error"),
+    (NcInProgress, 55, "In Progress"),
+    (NcTimeOutErr, 56, "Timeout Error"),
+    (NcBusyErr, 57, "Busy Error"),
+    (NcNotSupportedErr, 58, "Not Supported Error"),
+    (NcNetErr, 59, "Network Error"),
+    (NcAddrInUseErr, 60, "Address In Use Error"),
+    (NcSysOutOfMem, 61, "System Out Of Memory"),
+    (NcSysConnAbortedErr, 62, "System Connection Aborted Error"),
+    (NcConnRefusedErr, 63, "Connection Refused Error"),
+    (NcNotConnectedErr, 64, "Not Connected Error"),
+    (NcAlreadyConnectedErr, 65, "Already Connected Error"),
+    (NcConnClosedErr, 66, "Connection Closed Error"),
+    (AmInitErr, 67, "Initialization Error"),
+    (OccBadOccurrenceErr, 68, "Bad Occurrence Error"),
+    (OccWaitOnUnBoundHdlrErr, 69, "Wait On Unbound Handler Error"),
+    (OccFunnyQOverFlowErr, 70, "Funny Queue Overflow Error"),
+    (FDataLogTypeConflict, 71, "Data Log Type Conflict"),
+    (
+        EcLVSBCannotBeCalledFromThread,
+        72,
+        "LVSB Cannot Be Called From Thread"
+    ),
+    (AmUnrecognizedType, 73, "Unrecognized Type"),
+    (MCorruptErr, 74, "Corrupt Error"),
+    (EcLVSBErrorMakingTempDLL, 75, "LVSB Error Making Temp DLL"),
+    (EcLVSBOldCIN, 76, "LVSB Old CIN"),
+    (FmtTypeMismatch, 81, "Format Type Mismatch"),
+    (FmtUnknownConversion, 82, "Unknown Conversion"),
+    (FmtTooFew, 83, "Too Few"),
+    (FmtTooMany, 84, "Too Many"),
+    (FmtScanError, 85, "Scan Error"),
+    (LvOLEConvertErr, 87, "OLE Convert Error"),
+    (RtMenuErr, 88, "Runtime Menu Error"),
+    (PwdTampered, 89, "Password Tampered"),
+    (LvVariantAttrNotFound, 90, "Variant Attribute Not Found"),
+    (LvVariantTypeMismatch, 91, "Variant Type Mismatch"),
+    (AxEventDataNotAvailable, 92, "Event Data Not Available"),
+    (AxEventStoreNotPresent, 93, "Event Store Not Present"),
+    (AxOccurrenceNotFound, 94, "Occurrence Not Found"),
+    (AxEventQueueNotCreated, 95, "Event Queue Not Created"),
+    (AxEventInfoNotAvailable, 96, "Event Info Not Available"),
+    (OleNullRefnumPassed, 97, "Null Refnum Passed"),
+    (IviInvalidDowncast, 102, "Invalid Downcast"),
+    (IviInvalidClassSesn, 103, "Invalid Class Session"),
+    (NcSockNotMulticast, 108, "Socket Not Multicast"),
+    (NcSockNotSinglecast, 109, "Socket Not Singlecast"),
+    (NcBadMulticastAddr, 110, "Bad Multicast Address"),
+    (NcMcastSockReadOnly, 111, "Multicast Socket Read Only"),
+    (NcMcastSockWriteOnly, 112, "Multicast Socket Write Only"),
+    (NcDatagramMsgSzErr, 113, "Datagram Message Size Error"),
+    (DataCorruptErr, 116, "Data Corrupt Error"),
+    (RequireFullPathErr, 117, "Require Full Path Error"),
+    (FolderNotExistErr, 118, "Folder Does Not Exist Error"),
+    (NcBtInvalidModeErr, 119, "Bluetooth Invalid Mode Error"),
+    (NcBtSetModeErr, 120, "Bluetooth Set Mode Error"),
+    (
+        MgBtInvalidGUIDStrErr,
+        121,
+        "Bluetooth Invalid GUID String Error"
+    ),
+    (RVersInFuture, 122, "Version In Future")
+);
+
+// Helper to convert ErrorCode to i32
+impl From<MgErrorCode> for i32 {
+    fn from(code: MgErrorCode) -> Self {
+        code as i32
+    }
+}
+
+// Helper to convert i32 to ErrorCode
+impl TryFrom<i32> for MgErrorCode {
+    type Error = MgError;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        MgErrorCode::try_from(value).map_err(|_| MgError::MgArgErr)
+    }
 }
 
 /// MgErr is a simple wrapper around the error code that
