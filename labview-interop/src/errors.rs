@@ -170,8 +170,6 @@ define_errors!(
     (RVersInFuture, 122, "Version In Future")
 );
 
-impl Error for MgError {}
-
 // Helper to convert ErrorCode to i32
 impl From<MgErrorCode> for i32 {
     fn from(code: MgErrorCode) -> Self {
