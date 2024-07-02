@@ -2,7 +2,7 @@ use std::{error::Error, fmt::Display};
 use thiserror::Error;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use std::convert::TryFrom;
+
 // Macro to define the enum and implement the conversions
 macro_rules! define_errors {
     ($(($name:ident, $code:expr, $msg:expr)),*) => {
@@ -171,11 +171,11 @@ define_errors!(
 );
 
 // Helper to convert ErrorCode to i32
-impl From<MgErrorCode> for i32 {
-    fn from(code: MgErrorCode) -> Self {
-        code as i32
-    }
-}
+// impl From<MgErrorCode> for i32 {
+//     fn from(code: MgErrorCode) -> Self {
+//         code as i32
+//     }
+// }
 
 /// MgErr is a simple wrapper around the error code that
 /// is returned by the memory manager functions.
