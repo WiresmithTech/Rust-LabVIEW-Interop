@@ -17,7 +17,7 @@ pub use array::{LVArray, LVArrayHandle};
 pub use boolean::LVBool;
 #[cfg(target_pointer_width = "64")]
 pub use lv_errors::{ErrorClusterPtr, ToLvError};
-pub use string::LStrHandle;
+pub use string::{LStrHandle, LStrOwned};
 pub use timestamp::LVTime;
 
 /// Wrap a struct declaration to have the packing attributes

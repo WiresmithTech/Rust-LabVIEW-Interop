@@ -1,8 +1,10 @@
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+
 use labview_interop::errors::MgErr;
 use labview_interop::labview_layout;
 use labview_interop::memory::UPtr;
 use labview_interop::sync::{LVUserEvent, Occurence};
-use labview_interop::types::string::LStrHandle;
+use labview_interop::types::string::{LStrHandle, LStrOwned};
 #[cfg(target_pointer_width = "64")]
 use labview_interop::types::{ErrorClusterPtr, ToLvError};
 use labview_interop::types::{LVArrayHandle, LVBool, LVTime, LVVariant, Waveform};
@@ -68,8 +70,8 @@ pub extern "C" fn extract_from_array_ndarray(
     let rows = array.nrows();
     let columns = array.ncols();
     unsafe {
-        *end_of_first_row = array.get([0, columns - 1]).unwrap().clone();
-        *start_of_last_row = array.get([rows - 1, 0]).unwrap().clone();
+        *end_of_first_row = *array.get([0, columns - 1]).unwrap();
+        *start_of_last_row = *array.get([rows - 1, 0]).unwrap();
     }
 }
 
@@ -220,10 +222,11 @@ pub extern "C" fn generate_event_3(lv_user_event: *mut LVUserEvent<i32>) -> MgEr
 labview_layout!(
     pub struct UserEventCluster {
         eventno: i32,
-        id: LStrHandle,
+        id: LStrOwned,
     }
 );
 
+#[cfg(target_pointer_width = "64")]
 #[no_mangle]
 pub extern "C" fn update_cluster(cluster: UPtr<UserEventCluster>) -> MgErr {
     let clust = unsafe { cluster.as_ref_mut().unwrap() };
@@ -237,7 +240,7 @@ pub extern "C" fn update_cluster(cluster: UPtr<UserEventCluster>) -> MgErr {
 pub extern "C" fn generate_event_cluster(
     lv_user_event: UPtr<LVUserEvent<UserEventCluster>>,
 ) -> MgErr {
-    let mystr = LStrHandle::from_data("this is a string".as_bytes()).unwrap();
+    let mystr = LStrOwned::from_data(b"Hello World!").unwrap();
     let mut eventdata = UserEventCluster {
         eventno: 2,
         id: mystr,
@@ -261,12 +264,12 @@ pub extern "C" fn hello_world(mut string: LStrHandle) -> MgErr {
 
 #[no_mangle]
 pub extern "C" fn hello_world_owned(string: *mut LStrHandle) -> MgErr {
-    let result = LStrHandle::from_data("Hello World".as_bytes());
+    let result = LStrOwned::from_data("Hello World".as_bytes());
 
     match result {
         Ok(strok) => {
-            unsafe { *string = strok };
-            MgErr::NO_ERROR
+            let clone_result = unsafe { strok.clone_into_pointer(string) };
+            clone_result.into()
         }
         Err(err) => err.into(),
     }
