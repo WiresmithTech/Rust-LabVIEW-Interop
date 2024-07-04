@@ -2,6 +2,9 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
 lv_ver := "2020"
 
+unit-tests:
+  cargo test --features chrono
+
 integration-tests:
   cargo build -p labview-test-library
   cargo build -p labview-test-library --target i686-pc-windows-msvc
