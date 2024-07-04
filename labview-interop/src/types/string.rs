@@ -72,6 +72,18 @@ impl LStr {
         unsafe { std::slice::from_raw_parts_mut(self.data.as_mut_ptr(), self.size as usize) }
     }
 
+    /// Get the size of this LStr instance.
+    /// Would LStr ever be padded?
+    pub fn size(&self) -> usize {
+        std::mem::size_of::<i32>() + self.data.len()
+    }
+
+    /// Get the size of LStr given a specific data slice.
+    /// Would LStr ever be padded?
+    pub fn size_with_data(data: &[u8]) -> usize {
+        std::mem::size_of::<i32>() + data.len()
+    }
+
     /// Uses a system appropriate decoder to return a rust compatible string.
     ///
     /// This returns a [`std::borrow::Cow`] to avoid any allocations if the
@@ -126,6 +138,46 @@ impl PartialEq for LStr {
 /// Requires the link feature.
 #[cfg(feature = "link")]
 impl LStrHandle {
+    pub fn from_lstr(lstr_in: &LStr) -> Result<Self> {
+        let handle = UHandle::<LStr>::new(lstr_in.size())?;
+        unsafe {
+            let l_str = handle.as_ref_mut()?;
+            l_str.size = lstr_in.size;
+            std::ptr::copy_nonoverlapping(
+                lstr_in.data.as_ptr(),
+                l_str.data.as_mut_ptr(),
+                l_str.size as usize,
+            );
+        }
+
+        Ok(handle)
+    }
+
+    ///
+    /// # Example
+    /// ```
+    /// use labview_interop::types::{LStr, LStrHandle};
+    /// use labview_interop::errors::MgErr;
+    /// #[no_mangle]
+    /// pub extern "C" fn hello_world(mut strn: String) -> LStrHandle {
+    ///    let handle = LStrHandle<LStr>::from_data(strn.as_bytes()).unwrap(); // is == UHandle<LStr>
+    ///    handle
+    /// }
+    /// ```
+    pub fn from_data(data: &[u8]) -> Result<Self> {
+        let handle = UHandle::<LStr>::new(LStr::size_with_data(data))?;
+        unsafe {
+            let l_str = handle.as_ref_mut()?;
+            l_str.size = data.len() as i32;
+            std::ptr::copy_nonoverlapping(
+                data.as_ptr(),
+                l_str.data.as_mut_ptr(),
+                l_str.size as usize,
+            );
+        }
+
+        Ok(handle)
+    }
     /// Set the string as a binary value against the handle.
     ///
     /// This function will resize the handle based on the size of the input value.
@@ -146,11 +198,11 @@ impl LStrHandle {
     //```
     pub fn set(&mut self, value: &[u8]) -> Result<()> {
         let input_length = value.len();
+        let struct_size = LStr::size_with_data(value);
 
         unsafe {
             //Safety: Is this alignment ever wrong. Would it even pad between the size and data.
             // I believe not.
-            let struct_size = input_length + 4;
             self.resize(struct_size)?;
 
             let l_str = self.as_ref_mut()?;
