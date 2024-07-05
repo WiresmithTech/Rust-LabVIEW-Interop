@@ -52,11 +52,11 @@ labview_layout!(
 
 /// Definition of a handle to an LabVIEW String. Helper for FFI definition and
 /// required for any functions that need to resize the string.
-pub type LStrHandle = UHandle<LStr>;
+pub type LStrHandle<'a> = UHandle<'a, LStr>;
 /// Definition of a pointer to an LabVIEW String. Helper for FFI definition.
 pub type LStrPtr = UPtr<LStr>;
 /// Definition of an owned LStr Handle.
-pub type LStrOwned = LvOwned<LStr>;
+pub type LStrOwned<'a> = LvOwned<'a, LStr>;
 
 impl LStr {
     /// Access the data from the string as a binary slice.
@@ -139,7 +139,7 @@ impl PartialEq for LStr {
 ///
 /// Requires the link feature.
 #[cfg(feature = "link")]
-impl LStrHandle {
+impl<'a> LStrHandle<'a> {
     /// Set the string as a binary value against the handle.
     ///
     /// This function will resize the handle based on the size of the input value.
@@ -208,7 +208,7 @@ impl LStrHandle {
 }
 
 #[cfg(feature = "link")]
-impl LStrOwned {
+impl<'a> LStrOwned<'a> {
     /// Create a new owned `LStr` with a size of zero.
     pub fn new() -> Result<Self> {
         unsafe { LvOwned::<LStr>::new_unsized(|handle| handle.set(&[])) }

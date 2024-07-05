@@ -16,10 +16,10 @@ use super::boolean::LV_TRUE;
 
 labview_layout!(
     /// The cluster format used by LabVIEW for transmitting errors.
-    pub struct ErrorCluster {
+    pub struct ErrorCluster<'a> {
         status: LVBool,
         code: MgErr,
-        source: LStrHandle,
+        source: LStrHandle<'a>,
     }
 );
 
@@ -29,9 +29,9 @@ labview_layout!(
 ///
 /// It is recommended to manually call `ErrorClusterPtr::as_ref` or `ErrorClusterPtr::as_mut`
 /// so that null pointeres can be detected.
-pub type ErrorClusterPtr = UPtr<ErrorCluster>;
+pub type ErrorClusterPtr<'a> = UPtr<ErrorCluster<'a>>;
 
-impl ErrorCluster {
+impl<'a> ErrorCluster<'a> {
     /// Set a description and source in the format that LabVIEW will interpret for display.
     fn set_source(&mut self, source: &str, description: &str) -> Result<(), LVInteropError> {
         // Probably a clever way to avoid this allocation but for now we will take it.

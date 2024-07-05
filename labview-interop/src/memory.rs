@@ -2,6 +2,7 @@
 //! functions and types.
 //!
 //! todo: get to reference without panics.
+use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
 use crate::errors::{LVInteropError, Result};
@@ -77,9 +78,9 @@ impl<T: ?Sized> DerefMut for UPtr<T> {
 /// data can be resized and moved.
 #[repr(transparent)]
 #[derive(PartialEq, Eq, Debug)]
-pub struct UHandle<T: ?Sized>(pub *mut *mut T);
+pub struct UHandle<'a, T: ?Sized>(pub *mut *mut T, PhantomData<&'a ()>);
 
-impl<T: ?Sized> UHandle<T> {
+impl<'a, T: ?Sized> UHandle<'a, T> {
     /// Get a reference to the internal type. Errors if the pointer is null.
     ///
     /// # Safety
@@ -121,7 +122,7 @@ impl<T: ?Sized> UHandle<T> {
     }
 }
 
-impl<T: ?Sized> Deref for UHandle<T> {
+impl<'a, T: ?Sized> Deref for UHandle<'a, T> {
     type Target = T;
 
     /// Extract the target type.
@@ -132,7 +133,7 @@ impl<T: ?Sized> Deref for UHandle<T> {
     }
 }
 
-impl<T: ?Sized> DerefMut for UHandle<T> {
+impl<'a, T: ?Sized> DerefMut for UHandle<'a, T> {
     /// Deref to a mutable reference.
     ///
     /// This will panic if the handle or internal pointer is null.
@@ -142,7 +143,7 @@ impl<T: ?Sized> DerefMut for UHandle<T> {
 }
 
 #[cfg(feature = "link")]
-impl<T: ?Sized> UHandle<T> {
+impl<'a, T: ?Sized> UHandle<'a, T> {
     /// Resize the handle to the desired size.
     ///
     /// # Safety
@@ -169,6 +170,7 @@ impl<T: ?Sized> UHandle<T> {
 
 #[cfg(feature = "link")]
 mod lv_owned {
+    use std::marker::PhantomData;
     use std::ops::{Deref, DerefMut};
 
     use super::UHandle;
@@ -195,21 +197,21 @@ mod lv_owned {
     ///);
     ///```
     #[repr(transparent)]
-    pub struct LvOwned<T: ?Sized>(UHandle<T>);
+    pub struct LvOwned<'a, T: ?Sized>(UHandle<'a, T>);
 
-    impl<T: Sized> LvOwned<T> {
+    impl<'a, T: Sized> LvOwned<'a, T> {
         /// Create a new handle to a sized value of `T`.
         pub fn new() -> Result<Self> {
             let handle = unsafe { memory_api()?.new_handle(std::mem::size_of::<T>()) };
             if handle.is_null() {
                 Err(LVInteropError::HandleCreationFailed)
             } else {
-                Ok(Self(UHandle(handle as *mut *mut T)))
+                Ok(Self(UHandle(handle as *mut *mut T, PhantomData)))
             }
         }
     }
 
-    impl<T: ?Sized> LvOwned<T> {
+    impl<'a, T: ?Sized> LvOwned<'a, T> {
         /// Create a new handle to the type `T`. It will create an empty handle
         /// which you must initialise with the `init_routine`.
         /// This is useful for unsized types.
@@ -219,34 +221,36 @@ mod lv_owned {
         /// * This will create a handle to un-initialized memory. The provided initialisation
         ///    routine must prepare the memory.
         pub(crate) unsafe fn new_unsized(
-            init_routine: impl FnOnce(&mut UHandle<T>) -> Result<()>,
+            init_routine: impl FnOnce(&mut UHandle<'a, T>) -> Result<()>,
         ) -> Result<Self> {
             let handle = memory_api()?.new_handle(0);
             if handle.is_null() {
                 Err(LVInteropError::HandleCreationFailed)
             } else {
-                let mut new_value = Self(UHandle(handle as *mut *mut T));
+                let mut new_value = Self(UHandle(handle as *mut *mut T, PhantomData));
                 init_routine(&mut new_value)?;
                 Ok(new_value)
             }
         }
+
+        // pub fn handle(&mut self) -> UHandle<'a, T> {}
     }
 
-    impl<T: ?Sized> Deref for LvOwned<T> {
-        type Target = UHandle<T>;
+    impl<'a, T: ?Sized> Deref for LvOwned<'a, T> {
+        type Target = UHandle<'a, T>;
 
         fn deref(&self) -> &Self::Target {
             &self.0
         }
     }
 
-    impl<T: ?Sized> DerefMut for LvOwned<T> {
+    impl<'a, T: ?Sized> DerefMut for LvOwned<'a, T> {
         fn deref_mut(&mut self) -> &mut Self::Target {
             &mut self.0
         }
     }
 
-    impl<T: ?Sized> Drop for LvOwned<T> {
+    impl<'a, T: ?Sized> Drop for LvOwned<'a, T> {
         fn drop(&mut self) {
             let result = memory_api()
                 .map(|api| unsafe { api.dispose_handle(self.0 .0 as usize).to_result(()) });
