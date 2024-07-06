@@ -233,7 +233,14 @@ mod lv_owned {
             }
         }
 
-        // pub fn handle(&mut self) -> UHandle<'a, T> {}
+        /// Return the UHandle to the owned memory
+        ///
+        /// # Safety
+        ///
+        /// * This needs to take a mutable reference to self and lifetime annotation on UHandle, in order to avoid creating multiple UHandles
+        pub fn handle(&'a mut self) -> UHandle<'a, T> {
+            UHandle(self.0 .0, PhantomData)
+        }
     }
 
     impl<'a, T: ?Sized> Deref for LvOwned<'a, T> {
