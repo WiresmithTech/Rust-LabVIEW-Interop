@@ -12,10 +12,11 @@ use crate::{
     memory::MagicCookie,
 };
 
-/// Represents as UHandle passed by value. Can't use the generic
+/// Represents as UHandle/UPtr passed by value. Can't use the generic
 /// version from the memory module else since the functions
 /// aren't generic.
 pub(crate) type UHandleValue = usize;
+pub(crate) type UPtrValue = usize;
 
 #[ctor]
 static SYNC_API: Option<Container<SyncApi>> = unsafe { Container::load_self().ok() };
@@ -49,7 +50,7 @@ pub struct MemoryApi {
     //  return MgErr: (noErr | mZoneErr)
     //
     #[dlopen2_name = "DSCheckPtr"]
-    check_ptr: unsafe extern "C" fn(handle: UHandleValue) -> MgErr,
+    check_ptr: unsafe extern "C" fn(ptr: UPtrValue) -> MgErr,
     // Verifies that the specified pointer is allocated with XX NewPtr or XX NewPClr. If it is not a pointer, this function returns mZoneErr.
     // `MgErr DSCheckPtr(ptr);`
     //   ptr - UPtr, Pointer you want to verify.

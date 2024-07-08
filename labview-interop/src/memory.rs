@@ -46,8 +46,17 @@ impl<T: ?Sized> UPtr<T> {
 
     /// Check the validity of the handle to ensure it wont panic later.
     pub fn valid(&self) -> bool {
+        // check if not null
         let inner_ref = unsafe { self.as_ref() };
-        inner_ref.is_ok()
+        let notnull = inner_ref.is_ok();
+
+        // check if the memory manager actually knows about the handle if it is not null
+        let err = unsafe {
+            crate::labview::memory_api()
+                .unwrap()
+                .check_ptr(self.0 as *const () as usize)
+        };
+        notnull || err != MgErr::NO_ERROR
     }
 }
 
