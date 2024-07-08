@@ -41,6 +41,20 @@ pub struct SyncApi {
 
 #[derive(WrapperApi)]
 pub struct MemoryApi {
+    #[dlopen2_name = "DSCheckHandle"]
+    check_handle: unsafe extern "C" fn(handle: UHandleValue) -> MgErr,
+    // Verifies that the specified handle is a handle. If it is not a handle, this function returns mZoneErr.
+    // `MgErr DSCheckHandle(handle);`
+    //   handle - UHandle, Handle you want to verify.
+    //  return MgErr: (noErr | mZoneErr)
+    //
+    #[dlopen2_name = "DSCheckPtr"]
+    check_ptr: unsafe extern "C" fn(handle: UHandleValue) -> MgErr,
+    // Verifies that the specified pointer is allocated with XX NewPtr or XX NewPClr. If it is not a pointer, this function returns mZoneErr.
+    // `MgErr DSCheckPtr(ptr);`
+    //   ptr - UPtr, Pointer you want to verify.
+    //  return MgErr: (noErr | mZoneErr)
+    //
     #[dlopen2_name = "DSNewHandle"]
     new_handle: unsafe extern "C" fn(size: usize) -> *mut *mut std::ffi::c_void,
     #[dlopen2_name = "DSCopyHandle"]
