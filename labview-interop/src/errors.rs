@@ -44,7 +44,12 @@ macro_rules! define_errors {
     };
 }
 
-// Define the errors using the macro
+// LabVIEW general errors:
+// https://www.ni.com/docs/en-US/bundle/labview-api-ref/page/errors/general-labview-error-codes.html
+// Maybe these description match up wiht some of the Memory Manager errors?
+// TOdo: do we need to implement those error codes?
+
+// Define the Memory Manager errors using the macro
 define_errors!(
     (MgArgErr, 1, "Argument Error"),
     (MFullErr, 2, "Memory Full Error"),
