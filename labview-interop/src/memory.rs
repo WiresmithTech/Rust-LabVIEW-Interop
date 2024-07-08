@@ -143,19 +143,7 @@ impl<'a, T: ?Sized> DerefMut for UHandle<'a, T> {
     }
 }
 
-// /// TODO
-// #[cfg(feature = "link")]
-// impl<'a, T: ?Sized> Clone for UHandle<'a, T> {
-//     fn clone(&self) -> Self {
-//         let mut cloned_handle = UHandle(std::ptr::null_mut() as *mut *mut T, PhantomData);
-//         unsafe {
-//             self.clone_into_pointer(&mut cloned_handle as *mut UHandle<T>);
-//             cloned_handle
-//         }
-//     }
-// }
-
-//TODO
+//TODO test
 #[cfg(feature = "link")]
 impl<'a, T: ?Sized> Borrow<UHandle<'a, T>> for LvOwned<'a, T> {
     fn borrow(&self) -> &UHandle<'a, T> {
@@ -163,17 +151,19 @@ impl<'a, T: ?Sized> Borrow<UHandle<'a, T>> for LvOwned<'a, T> {
     }
 }
 
-//TODO
+//TODO test
 #[cfg(feature = "link")]
-impl<'a, T: Sized> ToOwned for UHandle<'a, T> {
+impl<'a, T: ?Sized> ToOwned for UHandle<'a, T> {
     type Owned = LvOwned<'a, T>;
 
     fn to_owned(&self) -> Self::Owned {
-        let owned_handle = LvOwned::<T>::new().unwrap();
+        // calling clone_into_pointer with a nullpointer returns a new Handle
+        let mut owned_handle = UHandle(std::ptr::null_mut() as *mut *mut T, PhantomData);
         unsafe {
-            self.clone_into_pointer(owned_handle.0 as *mut _).unwrap();
-        }
-        owned_handle
+            self.clone_into_pointer(&mut owned_handle as *mut UHandle<T>)
+                .unwrap();
+        };
+        LvOwned::from(owned_handle)
     }
 }
 
@@ -232,7 +222,7 @@ mod lv_owned {
     ///);
     ///```
     #[repr(transparent)]
-    pub struct LvOwned<'a, T: ?Sized>(UHandle<'a, T>);
+    pub struct LvOwned<'a, T: ?Sized>(pub(crate) UHandle<'a, T>);
 
     impl<'a, T: Sized> LvOwned<'a, T> {
         /// Create a new handle to a sized value of `T`.
@@ -289,7 +279,13 @@ mod lv_owned {
             unsafe {
                 self.clone_into_pointer(&mut cloned_handle as *mut UHandle<T>);
             }
-            LvOwned(cloned_handle)
+            Self(cloned_handle)
+        }
+    }
+
+    impl<'a, T: ?Sized> From<UHandle<'a, T>> for LvOwned<'a, T> {
+        fn from(handle: UHandle<'a, T>) -> Self {
+            Self(handle)
         }
     }
 
