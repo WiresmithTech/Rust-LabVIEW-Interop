@@ -4,7 +4,7 @@
 //! todo: get to reference without panics.
 use std::ops::{Deref, DerefMut};
 
-use crate::errors::{LVInteropError, Result};
+use crate::errors::{LVInteropError, MgErr, Result};
 
 /// A pointer from LabVIEW for the data.
 #[repr(transparent)]
@@ -116,8 +116,17 @@ impl<T: ?Sized> UHandle<T> {
 
     /// Check the validity of the handle to ensure it wont panic later.
     pub fn valid(&self) -> bool {
+        // check if is not NULL
         let inner_ref = unsafe { self.as_ref() };
-        inner_ref.is_ok()
+        let notnull = inner_ref.is_ok();
+
+        // check if the memory manager actually knows about the handle if it is not null
+        let err = unsafe {
+            crate::labview::memory_api()
+                .unwrap()
+                .check_handle(self.0 as usize)
+        };
+        notnull || err != MgErr::NO_ERROR
     }
 }
 
