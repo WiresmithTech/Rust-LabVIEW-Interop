@@ -2,6 +2,7 @@
 //! functions and types.
 //!
 //! todo: get to reference without panics.
+use std::borrow::{Borrow, ToOwned};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
@@ -142,6 +143,40 @@ impl<'a, T: ?Sized> DerefMut for UHandle<'a, T> {
     }
 }
 
+// /// TODO
+// #[cfg(feature = "link")]
+// impl<'a, T: ?Sized> Clone for UHandle<'a, T> {
+//     fn clone(&self) -> Self {
+//         let mut cloned_handle = UHandle(std::ptr::null_mut() as *mut *mut T, PhantomData);
+//         unsafe {
+//             self.clone_into_pointer(&mut cloned_handle as *mut UHandle<T>);
+//             cloned_handle
+//         }
+//     }
+// }
+
+//TODO
+#[cfg(feature = "link")]
+impl<'a, T: ?Sized> Borrow<UHandle<'a, T>> for LvOwned<'a, T> {
+    fn borrow(&self) -> &UHandle<'a, T> {
+        self.deref()
+    }
+}
+
+//TODO
+#[cfg(feature = "link")]
+impl<'a, T: Sized> ToOwned for UHandle<'a, T> {
+    type Owned = LvOwned<'a, T>;
+
+    fn to_owned(&self) -> Self::Owned {
+        let owned_handle = LvOwned::<T>::new().unwrap();
+        unsafe {
+            self.clone_into_pointer(owned_handle.0 as *mut _).unwrap();
+        }
+        owned_handle
+    }
+}
+
 #[cfg(feature = "link")]
 impl<'a, T: ?Sized> UHandle<'a, T> {
     /// Resize the handle to the desired size.
@@ -233,13 +268,28 @@ mod lv_owned {
             }
         }
 
+        /// TODO test
         /// Return the UHandle to the owned memory
         ///
         /// # Safety
         ///
-        /// * This needs to take a mutable reference to self and lifetime annotation on UHandle, in order to avoid creating multiple UHandles
+        /// * This needs to take a mutable reference to self and lifetime annotation on UHandle,
+        ///    in order to avoid creating multiple UHandles.
         pub fn handle(&'a mut self) -> UHandle<'a, T> {
             UHandle(self.0 .0, PhantomData)
+        }
+    }
+
+    /// TODO
+    /// potentially expensive operation
+    #[cfg(feature = "link")]
+    impl<'a, T: ?Sized> Clone for LvOwned<'a, T> {
+        fn clone(&self) -> Self {
+            let mut cloned_handle = UHandle(std::ptr::null_mut() as *mut *mut T, PhantomData);
+            unsafe {
+                self.clone_into_pointer(&mut cloned_handle as *mut UHandle<T>);
+            }
+            LvOwned(cloned_handle)
         }
     }
 
@@ -276,3 +326,8 @@ pub use lv_owned::LvOwned;
 #[repr(transparent)]
 #[doc(hidden)]
 pub struct MagicCookie(u32);
+
+// test
+// 1. LvOwned.clone
+// * Clone simple LvOwned
+// * Clone struct also containing LvOwned / UHandle
