@@ -129,3 +129,102 @@ pub struct MemoryApi {
     //      0D or cD  -  Complex double-precision, floating-point number
     //      0E or cX  -  Complex extended-precision, floating-point number
 }
+
+#[cfg(test)]
+mod tests {
+    // These tests are specifically geared to validate our understanding of the API
+    use super::*;
+    use std::ptr;
+
+    #[test]
+    fn test_copy_handle_basic() {
+        unsafe {
+            let api = memory_api().unwrap();
+            let src_handle = api.new_handle(10);
+            assert!(!src_handle.is_null());
+
+            // Initialize source handle with some data
+            let src_data = *src_handle;
+            ptr::write(src_data, 42u8);
+
+            let mut dest_handle: *mut *mut c_void = ptr::null_mut();
+            let result = api.copy_handle(
+                &mut dest_handle as *mut _ as *mut UHandleValue,
+                src_handle as UHandleValue,
+            );
+            assert_eq!(result, MgErr::NoErr);
+            assert!(!dest_handle.is_null());
+
+            // Verify data was copied correctly
+            let dest_data = *dest_handle;
+            assert_eq!(ptr::read(dest_data as *const u8), 42u8);
+
+            // Clean up
+            api.dispose_handle(src_handle as UHandleValue);
+            api.dispose_handle(dest_handle as UHandleValue);
+        }
+    }
+
+    #[test]
+    fn test_copy_handle_to_smaller() {
+        unsafe {
+            let api = memory_api().unwrap();
+            let src_handle = api.new_handle(10);
+            assert!(!src_handle.is_null());
+
+            // Initialize source handle with some data
+            let src_data = *src_handle;
+            ptr::write(src_data, 42u8);
+
+            let dest_handle = api.new_handle(5);
+            assert!(!dest_handle.is_null());
+
+            let result = api.copy_handle(
+                dest_handle as *mut _ as *mut UHandleValue,
+                src_handle as UHandleValue,
+            );
+            assert_eq!(result, MgErr::NoErr);
+
+            // Verify data was copied correctly
+            let dest_data = *dest_handle;
+            assert_eq!(ptr::read(dest_data as *const u8), 42u8);
+
+            // Clean up
+            api.dispose_handle(src_handle as UHandleValue);
+            api.dispose_handle(dest_handle as UHandleValue);
+        }
+    }
+
+    #[test]
+    fn test_copy_handle_deep_copy() {
+        unsafe {
+            let api = memory_api().unwrap();
+            let src_handle = api.new_handle(10);
+            assert!(!src_handle.is_null());
+
+            // Initialize source handle with some data
+            let src_data = *src_handle;
+            let nested_handle = api.new_handle(5);
+            assert!(!nested_handle.is_null());
+            ptr::write(src_data as *mut *mut c_void, nested_handle);
+
+            let mut dest_handle: *mut *mut c_void = ptr::null_mut();
+            let result = api.copy_handle(
+                &mut dest_handle as *mut _ as *mut UHandleValue,
+                src_handle as UHandleValue,
+            );
+            assert_eq!(result, MgErr::NoErr);
+            assert!(!dest_handle.is_null());
+
+            // Verify data was copied correctly (shallow copy expected)
+            let dest_data = *dest_handle;
+            let copied_nested_handle = ptr::read(dest_data as *const *mut c_void);
+            assert_eq!(nested_handle, copied_nested_handle);
+
+            // Clean up
+            api.dispose_handle(nested_handle as UHandleValue);
+            api.dispose_handle(src_handle as UHandleValue);
+            api.dispose_handle(dest_handle as UHandleValue);
+        }
+    }
+}
