@@ -163,7 +163,7 @@ impl<'a, T: ?Sized> ToOwned for UHandle<'a, T> {
             self.clone_into_pointer(&mut owned_handle as *mut UHandle<T>)
                 .unwrap();
         };
-        LvOwned::from(owned_handle)
+        LvOwned(owned_handle)
     }
 }
 
@@ -192,6 +192,12 @@ impl<'a, T: ?Sized> UHandle<'a, T> {
         error.to_result(())
     }
 }
+
+/// # Safety
+///
+/// * UHandle memory is managed by the Labview Memory Manager, which is thread safe
+unsafe impl<'a, T: ?Sized> Send for UHandle<'a, T> {}
+unsafe impl<'a, T: ?Sized> Sync for UHandle<'a, T> {}
 
 #[cfg(feature = "link")]
 mod lv_owned {
@@ -283,12 +289,6 @@ mod lv_owned {
         }
     }
 
-    impl<'a, T: ?Sized> From<UHandle<'a, T>> for LvOwned<'a, T> {
-        fn from(handle: UHandle<'a, T>) -> Self {
-            Self(handle)
-        }
-    }
-
     impl<'a, T: ?Sized> Deref for LvOwned<'a, T> {
         type Target = UHandle<'a, T>;
 
@@ -314,6 +314,12 @@ mod lv_owned {
     }
 }
 
+/// # Safety
+///
+/// * LvOwned memory is access through UHandle which is managed by the Labview Memory Manager, which is thread safe
+unsafe impl<'a, T: ?Sized> Send for LvOwned<'a, T> {}
+unsafe impl<'a, T: ?Sized> Sync for LvOwned<'a, T> {}
+
 #[cfg(feature = "link")]
 pub use lv_owned::LvOwned;
 
@@ -324,6 +330,8 @@ pub use lv_owned::LvOwned;
 pub struct MagicCookie(u32);
 
 // test
-// 1. LvOwned.clone
+// 1. LvOwned.clone()
 // * Clone simple LvOwned
 // * Clone struct also containing LvOwned / UHandle
+// 2. UHandle.to_owned()
+// 3. Send / Sync
