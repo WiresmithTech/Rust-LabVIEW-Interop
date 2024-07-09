@@ -54,7 +54,7 @@ labview_layout!(
 
 /// Definition of a handle to an LabVIEW String. Helper for FFI definition and
 /// required for any functions that need to resize the string.
-pub type LStrHandle = UHandle<LStr>;
+pub type LStrHandle<'a> = UHandle<'a, LStr>;
 /// Definition of a pointer to an LabVIEW String. Helper for FFI definition.
 pub type LStrPtr = UPtr<LStr>;
 /// Definition of an owned LStr Handle.
@@ -142,7 +142,7 @@ impl PartialEq for LStr {
 ///
 /// Requires the link feature.
 #[cfg(feature = "link")]
-impl LStrHandle {
+impl<'a> LStrHandle<'a> {
     /// Set the string as a binary value against the handle.
     ///
     /// This function will resize the handle based on the size of the input value.

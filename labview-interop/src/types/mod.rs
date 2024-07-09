@@ -94,7 +94,7 @@ macro_rules! labview_layout {
 ///
 /// This is available as a placeholder in clusters etc.
 #[repr(transparent)]
-pub struct LVVariant(UHandle<c_void>);
+pub struct LVVariant<'variant>(UHandle<'variant, c_void>);
 
 labview_layout!(
     /// Represents the LabVIEW waveform type where:
@@ -107,20 +107,20 @@ labview_layout!(
     ///
     /// The padding scheme here is wierd and unexpected and has been reverse engineered
     /// based on real calls. No idea why the padding exists whether it is documented anywhere.
-    pub struct Waveform<T> {
+    pub struct Waveform<'waveform, T> {
         /// The timestamp for the first data value.
         pub t0: timestamp::LVTime,
         /// The time in seconds beween samples.
         pub dt: f64,
         /// A 1D array of the contained data.
-        pub data: LVArrayHandle<1, T>,
+        pub data: LVArrayHandle<'waveform, 1, T>,
         #[cfg(target_pointer_width = "64")]
         _pad: u64,
         #[cfg(target_pointer_width = "32")]
         _pad: u32,
         #[cfg(target_pointer_width = "32")]
         _mini_pad: u8,
-        attributes: LVVariant,
+        attributes: LVVariant<'waveform>,
         #[cfg(target_pointer_width = "64")]
         _pad2: u64,
         #[cfg(target_pointer_width = "32")]
