@@ -29,10 +29,10 @@ labview_layout!(
 ///
 /// Many string manipulation functions are only available with the `link` feature enabled so
 /// it can manipulate LabVIEW Strings.
-pub type ErrorClusterPtr = UPtr<ErrorCluster>;
+pub type ErrorClusterPtr<'a> = UPtr<ErrorCluster<'a>>;
 
 #[cfg(feature = "link")]
-impl ErrorCluster {
+impl<'a> ErrorCluster<'a> {
     fn format_error_source(source: &str, description: &str) -> String {
         match (source, description) {
             ("", description) => format!("<ERR>\n{description}"),
@@ -129,20 +129,20 @@ mod tests {
 
     #[test]
     fn test_source_writer_empty_description() {
-        let source = format_error_source("Rust", "");
+        let source = ErrorCluster::format_error_source("Rust", "");
         assert_eq!(source, "Rust");
     }
 
     #[test]
     fn test_source_writer_with_description() {
-        let source = format_error_source("Rust", "An Error Occured");
+        let source = ErrorCluster::format_error_source("Rust", "An Error Occured");
         let expected = "Rust\n<ERR>\nAn Error Occured";
         assert_eq!(source, expected)
     }
 
     #[test]
     fn test_source_writer_empty_source() {
-        let source = format_error_source("", "An Error Occured");
+        let source = ErrorCluster::format_error_source("", "An Error Occured");
         let expected = "<ERR>\nAn Error Occured";
         assert_eq!(source, expected)
     }
