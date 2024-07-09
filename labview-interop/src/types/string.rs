@@ -2,12 +2,14 @@
 //! interface provides.
 //!
 
-use encoding_rs::Encoding;
-use std::borrow::Cow;
-
+#[cfg(feature = "link")]
 use crate::errors::Result;
 use crate::labview_layout;
-use crate::memory::{LvOwned, UHandle, UPtr};
+#[cfg(feature = "link")]
+use crate::memory::LvOwned;
+use crate::memory::{UHandle, UPtr};
+use encoding_rs::Encoding;
+use std::borrow::Cow;
 
 #[cfg(target_os = "windows")]
 fn get_encoding() -> &'static Encoding {
@@ -56,6 +58,7 @@ pub type LStrHandle = UHandle<LStr>;
 /// Definition of a pointer to an LabVIEW String. Helper for FFI definition.
 pub type LStrPtr = UPtr<LStr>;
 /// Definition of an owned LStr Handle.
+#[cfg(feature = "link")]
 pub type LStrOwned = LvOwned<LStr>;
 
 impl LStr {

@@ -4,7 +4,7 @@
 //! todo: get to reference without panics.
 use std::ops::{Deref, DerefMut};
 
-use crate::errors::{LVInteropError, MgErr, Result};
+use crate::errors::{LVInteropError, Result};
 
 /// A pointer from LabVIEW for the data.
 #[repr(transparent)]
@@ -142,7 +142,7 @@ impl<T: ?Sized> UHandle<T> {
                     .unwrap()
                     .check_handle(self.0 as usize)
             };
-            return ret == MgErr::NO_ERROR;
+            ret == crate::errors::MgErr::NO_ERROR
         }
         #[cfg(not(feature = "link"))]
         {

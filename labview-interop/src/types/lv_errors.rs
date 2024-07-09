@@ -11,9 +11,6 @@ use crate::memory::UPtr;
 use crate::types::LStrHandle;
 use crate::types::LVBool;
 
-use super::boolean::LV_FALSE;
-use super::boolean::LV_TRUE;
-
 labview_layout!(
     /// The cluster format used by LabVIEW for transmitting errors.
     pub struct ErrorCluster {
@@ -29,13 +26,25 @@ labview_layout!(
 ///
 /// It is recommended to manually call `ErrorClusterPtr::as_ref` or `ErrorClusterPtr::as_mut`
 /// so that null pointeres can be detected.
+///
+/// Many string manipulation functions are only available with the `link` feature enabled so
+/// it can manipulate LabVIEW Strings.
 pub type ErrorClusterPtr = UPtr<ErrorCluster>;
 
+#[cfg(feature = "link")]
 impl ErrorCluster {
+    fn format_error_source(source: &str, description: &str) -> String {
+        match (source, description) {
+            ("", description) => format!("<ERR>\n{description}"),
+            (source, "") => source.to_string(),
+            (source, description) => format!("{source}\n<ERR>\n{description}"),
+        }
+    }
+
     /// Set a description and source in the format that LabVIEW will interpret for display.
     fn set_source(&mut self, source: &str, description: &str) -> Result<(), LVInteropError> {
         // Probably a clever way to avoid this allocation but for now we will take it.
-        let full_source = format_error_source(source, description);
+        let full_source = Self::format_error_source(source, description);
         self.source.set_str(&full_source)
     }
 
@@ -47,7 +56,7 @@ impl ErrorCluster {
         description: &str,
     ) -> Result<(), LVInteropError> {
         self.code = code;
-        self.status = LV_FALSE;
+        self.status = super::boolean::LV_FALSE;
         self.set_source(source, description)
     }
 
@@ -59,16 +68,8 @@ impl ErrorCluster {
         description: &str,
     ) -> Result<(), LVInteropError> {
         self.code = code;
-        self.status = LV_TRUE;
+        self.status = super::boolean::LV_TRUE;
         self.set_source(source, description)
-    }
-}
-
-fn format_error_source(source: &str, description: &str) -> String {
-    match (source, description) {
-        ("", description) => format!("<ERR>\n{description}"),
-        (source, "") => source.to_string(),
-        (source, description) => format!("{source}\n<ERR>\n{description}"),
     }
 }
 
@@ -97,6 +98,9 @@ pub trait ToLvError {
     ///
     /// The pointer is the type that is recieved through the Call Library Node so
     /// there is no need to deal with references before this point.
+    ///
+    /// This requires the `link` feature to enable string manipulation.
+    #[cfg(feature = "link")]
     fn write_error(&self, error_cluster: ErrorClusterPtr) -> Result<(), LVInteropError> {
         let cluster = unsafe { error_cluster.as_ref_mut()? };
         let code = self.code();
