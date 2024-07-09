@@ -73,7 +73,7 @@ impl<T: ?Sized> DerefMut for UPtr<T> {
 /// data can be resized and moved.
 #[repr(transparent)]
 #[derive(PartialEq, Eq, Debug)]
-pub struct UHandle<'a, T: ?Sized>(pub *mut *mut T, PhantomData<&'a ()>);
+pub struct UHandle<'a, T: ?Sized>(pub *mut *mut T, PhantomData<&'a T>);
 
 impl<'a, T: ?Sized> UHandle<'a, T> {
     /// Get a reference to the internal type. Errors if the pointer is null.
@@ -177,8 +177,7 @@ impl<'a, T: ?Sized> DerefMut for UHandle<'a, T> {
 #[cfg(feature = "link")]
 impl<'a, T> Borrow<UHandle<'a, T>> for LvOwned<T::Owned>
 where
-    T: ToOwned + ?Sized + 'a,
-    T::Owned: 'static,
+    T: ToOwned + ?Sized,
 {
     fn borrow(&self) -> &UHandle<'a, T> {
         // Unsafe transmute to convert the lifetime
@@ -252,7 +251,7 @@ mod lv_owned {
     ///);
     ///```
     #[repr(transparent)]
-    pub struct LvOwned<T: ?Sized>(pub(crate) UHandle<'static, T>);
+    pub struct LvOwned<T: ?Sized + 'static>(pub(crate) UHandle<'static, T>);
 
     impl<T: Sized> LvOwned<T> {
         /// Create a new handle to a sized value of `T`.
@@ -266,7 +265,7 @@ mod lv_owned {
         }
     }
 
-    impl<T: ?Sized> LvOwned<T> {
+    impl<T: ?Sized + Sized + Clone> LvOwned<T> {
         /// Create a new handle to the type `T`. It will create an empty handle
         /// which you must initialise with the `init_routine`.
         /// This is useful for unsized types.
@@ -282,9 +281,9 @@ mod lv_owned {
             if handle.is_null() {
                 Err(LVInteropError::HandleCreationFailed)
             } else {
-                let mut new_value = Self(UHandle(handle as *mut *mut T, PhantomData));
+                let mut new_value = UHandle(handle as *mut *mut T, PhantomData);
                 init_routine(&mut new_value)?;
-                Ok(new_value)
+                Ok(new_value.to_owned())
             }
         }
 
@@ -309,7 +308,7 @@ mod lv_owned {
     #[cfg(feature = "link")]
     impl<T> Clone for LvOwned<T>
     where
-        T: ?Sized + ToOwned,
+        T: ?Sized + Sized + ToOwned<Owned = T> + Clone,
         T::Owned: 'static,
     {
         fn clone(&self) -> Self {
@@ -317,12 +316,15 @@ mod lv_owned {
             unsafe {
                 self.0.clone_into_pointer(&mut cloned_handle).unwrap();
             }
-            LvOwned::from_handle(cloned_handle)
+            //LvOwned::from_handle(cloned_handle)
+            cloned_handle.to_owned()
+            //LvOwned::from(cloned_handle.to_owned())
         }
     }
 
     impl<T: ?Sized> Deref for LvOwned<T> {
-        type Target = UHandle<'static, T>;
+        //type Target = UHandle<'static, T>;
+        type Target = T;
 
         fn deref(&self) -> &Self::Target {
             &self.0
@@ -347,18 +349,23 @@ mod lv_owned {
 
     //TODO test
     #[cfg(feature = "link")]
-    impl<'a, T> ToOwned for UHandle<'a, T>
+    impl<'a, T: ?Sized + ToOwned> ToOwned for UHandle<'a, T>
     where
-        T: ToOwned + ?Sized + 'a,
         T::Owned: 'static,
     {
         type Owned = LvOwned<T::Owned>;
 
         fn to_owned(&self) -> Self::Owned {
             // calling clone_into_pointer with a nullpointer returns a new Handle
-            let mut owned_handle = UHandle(std::ptr::null_mut(), PhantomData);
+            let owned_handle = UHandle(std::ptr::null_mut() as *mut *mut T::Owned, PhantomData);
             unsafe {
-                self.clone_into_pointer(&mut owned_handle).unwrap();
+                // self.clone_into_pointer(&mut owned_handle as *mut *mut T::Owned)
+                //     .unwrap();
+
+                let error = crate::labview::memory_api()
+                    .unwrap()
+                    .copy_handle(owned_handle.0 as *mut usize, self.0 as usize);
+                error.to_result(()).unwrap()
             };
 
             LvOwned(owned_handle)
