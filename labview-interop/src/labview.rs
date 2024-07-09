@@ -17,6 +17,11 @@ use crate::{
 /// aren't generic.
 pub(crate) type UHandleValue = usize;
 
+/// Represents as UPtr passed by value. Can't use the generic
+/// version from the memory module else since the functions
+/// aren't generic.
+pub(crate) type UPtrValue = usize;
+
 #[ctor]
 static SYNC_API: Option<Container<SyncApi>> = unsafe { Container::load_self().ok() };
 
@@ -65,6 +70,27 @@ pub struct SyncApi {
 /// The [official documentation](https://www.ni.com/docs/en-US/bundle/labview-api-ref/page/properties-and-methods/lv-manager/memory-manager-functions.html) for the LabVIEW Memory Manager can be found (last verified 2024-jul-09) on the webpage of National Instruments.
 #[derive(WrapperApi)]
 pub struct MemoryApi {
+    /// Verifies that the specified handle is a handle. If it is not a handle, this function returns mZoneErr.
+    /// ```C
+    /// MgErr DSCheckHandle(handle);
+    /// ```
+    /// - `handle`: `UHandle`, handle you want to verify.
+    ///
+    /// Returns `MgErr`: `noErr` or `mZoneErr`
+    #[dlopen2_name = "DSCheckHandle"]
+    check_handle: unsafe extern "C" fn(handle: UHandleValue) -> MgErr,
+
+    /// Verifies that the specified pointer is allocated with XX NewPtr or XX NewPClr. If it is not a pointer, this function returns mZoneErr.
+    ///
+    /// ```C
+    /// MgErr DSCheckPtr(ptr);
+    /// ```
+    ///  - `ptr`: `UPtr`, Pointer you want to verify.
+    ///
+    /// Returns `MgErr`: `noErr` or `mZoneErr`
+    #[dlopen2_name = "DSCheckPtr"]
+    check_ptr: unsafe extern "C" fn(ptr: UPtrValue) -> MgErr,
+
     /// Creates a new handle to a relocatable block of memory of the specified size.
     ///
     /// The routine aligns all handles and pointers in DS to accommodate the largest possible data

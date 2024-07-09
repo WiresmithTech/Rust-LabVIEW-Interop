@@ -4,7 +4,7 @@
 //! todo: get to reference without panics.
 use std::ops::{Deref, DerefMut};
 
-use crate::errors::{LVInteropError, Result};
+use crate::errors::{LVInteropError, MgErr, Result};
 
 /// A pointer from LabVIEW for the data.
 #[repr(transparent)]
@@ -46,8 +46,22 @@ impl<T: ?Sized> UPtr<T> {
 
     /// Check the validity of the handle to ensure it wont panic later.
     pub fn valid(&self) -> bool {
+        // check if not null
         let inner_ref = unsafe { self.as_ref() };
-        inner_ref.is_ok()
+
+        // # Safety
+        //
+        // Make sure we don't call the following function on an invalid pointer
+        if inner_ref.is_err() {
+            return false;
+        }
+        // check if the memory manager actually knows about the handle if it is not null
+        let ret = unsafe {
+            crate::labview::memory_api()
+                .unwrap()
+                .check_ptr(self.0 as *const () as usize)
+        };
+        ret == MgErr::NO_ERROR
     }
 }
 
@@ -116,8 +130,22 @@ impl<T: ?Sized> UHandle<T> {
 
     /// Check the validity of the handle to ensure it wont panic later.
     pub fn valid(&self) -> bool {
+        // check if is not NULL
         let inner_ref = unsafe { self.as_ref() };
-        inner_ref.is_ok()
+
+        // # Safety
+        //
+        // Make sure we don't call the following function on an invalid pointer
+        if inner_ref.is_err() {
+            return false;
+        }
+        // check if the memory manager actually knows about the handle if it is not null
+        let ret = unsafe {
+            crate::labview::memory_api()
+                .unwrap()
+                .check_handle(self.0 as usize)
+        };
+        ret == MgErr::NO_ERROR
     }
 }
 
