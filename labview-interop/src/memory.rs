@@ -48,15 +48,20 @@ impl<T: ?Sized> UPtr<T> {
     pub fn valid(&self) -> bool {
         // check if not null
         let inner_ref = unsafe { self.as_ref() };
-        let notnull = inner_ref.is_ok();
 
+        // # Safety
+        //
+        // Make sure we don't call the following function on an invalid pointer
+        if inner_ref.is_err() {
+            return false;
+        }
         // check if the memory manager actually knows about the handle if it is not null
-        let err = unsafe {
+        let ret = unsafe {
             crate::labview::memory_api()
                 .unwrap()
                 .check_ptr(self.0 as *const () as usize)
         };
-        notnull || err != MgErr::NO_ERROR
+        ret == MgErr::NO_ERROR
     }
 }
 
@@ -127,15 +132,20 @@ impl<T: ?Sized> UHandle<T> {
     pub fn valid(&self) -> bool {
         // check if is not NULL
         let inner_ref = unsafe { self.as_ref() };
-        let notnull = inner_ref.is_ok();
 
+        // # Safety
+        //
+        // Make sure we don't call the following function on an invalid pointer
+        if inner_ref.is_err() {
+            return false;
+        }
         // check if the memory manager actually knows about the handle if it is not null
-        let err = unsafe {
+        let ret = unsafe {
             crate::labview::memory_api()
                 .unwrap()
                 .check_handle(self.0 as usize)
         };
-        notnull || err != MgErr::NO_ERROR
+        ret == MgErr::NO_ERROR
     }
 }
 
