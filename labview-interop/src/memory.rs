@@ -45,12 +45,6 @@ impl<T: ?Sized> UPtr<T> {
     pub unsafe fn as_ref_mut(&self) -> Result<&mut T> {
         self.0.as_mut().ok_or(LVInteropError::InvalidHandle)
     }
-
-    /// Check the validity of the handle to ensure it wont panic later.
-    pub fn valid(&self) -> bool {
-        let inner_ref = unsafe { self.as_ref() };
-        inner_ref.is_ok()
-    }
 }
 
 impl<T: ?Sized> Deref for UPtr<T> {
@@ -117,9 +111,45 @@ impl<'a, T: ?Sized> UHandle<'a, T> {
     }
 
     /// Check the validity of the handle to ensure it wont panic later.
+    ///
+    /// A valid handle is:
+    ///
+    /// . Not Null.
+    /// . Points to a pointer.
+    /// . That pointer is in the LabVIEW memory zone.
+    ///
+    /// The last 2 checks are done by LabVIEW and require the `link` feature.
+    ///
+    /// If the `link` feature is not enabled then we just check it is not null.
+    ///
+    /// # Panics/Safety
+    ///
+    /// This will cause a segfault if the handle doesn't point to a valid address.
     pub fn valid(&self) -> bool {
+        // check if is not NULL
         let inner_ref = unsafe { self.as_ref() };
-        inner_ref.is_ok()
+
+        // # Safety
+        //
+        // Make sure we don't call the following function on an invalid pointer
+        if inner_ref.is_err() {
+            return false;
+        }
+        // Only call the API in the link feature.
+        #[cfg(feature = "link")]
+        {
+            // check if the memory manager actually knows about the handle if it is not null
+            let ret = unsafe {
+                crate::labview::memory_api()
+                    .unwrap()
+                    .check_handle(self.0 as usize)
+            };
+            ret == crate::errors::MgErr::NO_ERROR
+        }
+        #[cfg(not(feature = "link"))]
+        {
+            return true;
+        }
     }
 }
 
@@ -200,7 +230,7 @@ mod lv_owned {
     ///
     /// This means it can be used in structs in place of a handle.
     ///
-    /// # Example In Struct (LStrOwned is equivalent of LvOwned<LStr>).
+    /// # Example In Struct (LStrOwned is equivalent of `LvOwned<LStr>`).
     /// ```no_run
     ///# use labview_interop::labview_layout;
     ///# use labview_interop::types::LStrOwned;
