@@ -45,6 +45,11 @@ impl<T: ?Sized> UPtr<T> {
     }
 
     /// Check the validity of the handle to ensure it wont panic later.
+    ///
+    /// A valid pointer is:
+    ///
+    /// . Not null
+    /// . Points into the LabVIEW memory space.
     pub fn valid(&self) -> bool {
         // check if not null
         let inner_ref = unsafe { self.as_ref() };
@@ -129,6 +134,16 @@ impl<T: ?Sized> UHandle<T> {
     }
 
     /// Check the validity of the handle to ensure it wont panic later.
+    ///
+    /// A valid handle is:
+    ///
+    /// . Not Null.
+    /// . Points to a pointer.
+    /// . That pointer is in the LabVIEW memory zone.
+    ///
+    /// # Panics/Safety
+    ///
+    /// This will cause a segfault if the handle doesn't point to a valid address.
     pub fn valid(&self) -> bool {
         // check if is not NULL
         let inner_ref = unsafe { self.as_ref() };
