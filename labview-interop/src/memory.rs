@@ -43,31 +43,6 @@ impl<T: ?Sized> UPtr<T> {
     pub unsafe fn as_ref_mut(&self) -> Result<&mut T> {
         self.0.as_mut().ok_or(LVInteropError::InvalidHandle)
     }
-
-    /// Check the validity of the handle to ensure it wont panic later.
-    ///
-    /// A valid pointer is:
-    ///
-    /// . Not null
-    /// . Points into the LabVIEW memory space.
-    pub fn valid(&self) -> bool {
-        // check if not null
-        let inner_ref = unsafe { self.as_ref() };
-
-        // # Safety
-        //
-        // Make sure we don't call the following function on an invalid pointer
-        if inner_ref.is_err() {
-            return false;
-        }
-        // check if the memory manager actually knows about the handle if it is not null
-        let ret = unsafe {
-            crate::labview::memory_api()
-                .unwrap()
-                .check_ptr(self.0 as *const () as usize)
-        };
-        ret == MgErr::NO_ERROR
-    }
 }
 
 impl<T: ?Sized> Deref for UPtr<T> {
@@ -141,6 +116,10 @@ impl<T: ?Sized> UHandle<T> {
     /// . Points to a pointer.
     /// . That pointer is in the LabVIEW memory zone.
     ///
+    /// The last 2 checks are done by LabVIEW and require the `link` feature.
+    ///
+    /// If the `link` feature is not enabled then we just check it is not null.
+    ///
     /// # Panics/Safety
     ///
     /// This will cause a segfault if the handle doesn't point to a valid address.
@@ -154,13 +133,21 @@ impl<T: ?Sized> UHandle<T> {
         if inner_ref.is_err() {
             return false;
         }
-        // check if the memory manager actually knows about the handle if it is not null
-        let ret = unsafe {
-            crate::labview::memory_api()
-                .unwrap()
-                .check_handle(self.0 as usize)
-        };
-        ret == MgErr::NO_ERROR
+        // Only call the API in the link feature.
+        #[cfg(feature = "link")]
+        {
+            // check if the memory manager actually knows about the handle if it is not null
+            let ret = unsafe {
+                crate::labview::memory_api()
+                    .unwrap()
+                    .check_handle(self.0 as usize)
+            };
+            return ret == MgErr::NO_ERROR;
+        }
+        #[cfg(not(feature = "link"))]
+        {
+            return true;
+        }
     }
 }
 

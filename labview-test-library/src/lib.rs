@@ -32,24 +32,6 @@ pub extern "C" fn handle_validity_checks(
     }
 }
 
-/// This will check the provided handle is valid and also provide results from a null and made up handle
-/// to confirm the validity check works.
-#[no_mangle]
-pub extern "C" fn pointer_validity_checks(
-    valid_ptr: UPtr<f64>,
-    null: *mut LVBool,
-    valid: *mut LVBool,
-    random_address: *mut LVBool,
-) {
-    unsafe {
-        *valid = valid_ptr.valid().into();
-        let null_handle: UPtr<f64> = UPtr::new(std::ptr::null_mut());
-        *null = null_handle.valid().into();
-        let madeup_ptr: UPtr<f64> = UPtr::new(0xDEADFFFF as *mut f64);
-        *random_address = madeup_ptr.valid().into();
-    }
-}
-
 #[no_mangle]
 pub extern "C" fn timestamp_to_epoch(timestamp: *const LVTime) -> f64 {
     unsafe { (*timestamp).to_lv_epoch() }
