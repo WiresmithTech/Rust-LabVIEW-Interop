@@ -2,7 +2,7 @@
 //! functions and types.
 //!
 //! todo: get to reference without panics.
-use std::borrow::{Borrow, ToOwned};
+use std::borrow::Borrow;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
@@ -175,9 +175,14 @@ impl<'a, T: ?Sized> DerefMut for UHandle<'a, T> {
 
 //TODO test
 #[cfg(feature = "link")]
-impl<'a, T: ?Sized> Borrow<UHandle<'a, T>> for LvOwned<'a, T> {
+impl<'a, T> Borrow<UHandle<'a, T>> for LvOwned<T::Owned>
+where
+    T: ToOwned + ?Sized + 'a,
+    T::Owned: 'static,
+{
     fn borrow(&self) -> &UHandle<'a, T> {
-        self.deref()
+        // Unsafe transmute to convert the lifetime
+        unsafe { std::mem::transmute(self) }
     }
 }
 
@@ -201,7 +206,11 @@ impl<'a, T: ?Sized> UHandle<'a, T> {
     ///
     /// * If the other pointer is invalid this may cause UB.
     /// * If the other pointer points to null, you must wrap the value as an owned handle otherwise it will leak memory.
-    pub unsafe fn clone_into_pointer(&self, other: *mut Self) -> Result<()> {
+    // pub unsafe fn clone_into_pointer2(&self, other: *mut Self) -> Result<()> {
+    //     let error = crate::labview::memory_api()?.copy_handle(other as *mut usize, self.0 as usize);
+    //     error.to_result(())
+    // }
+    pub unsafe fn clone_into_pointer(&self, other: *mut UHandle<'_, T>) -> Result<()> {
         let error = crate::labview::memory_api()?.copy_handle(other as *mut usize, self.0 as usize);
         error.to_result(())
     }
@@ -215,6 +224,7 @@ unsafe impl<'a, T: ?Sized> Sync for UHandle<'a, T> {}
 
 #[cfg(feature = "link")]
 mod lv_owned {
+    use std::borrow::ToOwned;
     use std::marker::PhantomData;
     use std::ops::{Deref, DerefMut};
 
@@ -242,9 +252,9 @@ mod lv_owned {
     ///);
     ///```
     #[repr(transparent)]
-    pub struct LvOwned<'a, T: ?Sized>(pub(crate) UHandle<'a, T>);
+    pub struct LvOwned<T: ?Sized>(pub(crate) UHandle<'static, T>);
 
-    impl<'a, T: Sized> LvOwned<'a, T> {
+    impl<T: Sized> LvOwned<T> {
         /// Create a new handle to a sized value of `T`.
         pub fn new() -> Result<Self> {
             let handle = unsafe { memory_api()?.new_handle(std::mem::size_of::<T>()) };
@@ -256,7 +266,7 @@ mod lv_owned {
         }
     }
 
-    impl<'a, T: ?Sized> LvOwned<'a, T> {
+    impl<T: ?Sized> LvOwned<T> {
         /// Create a new handle to the type `T`. It will create an empty handle
         /// which you must initialise with the `init_routine`.
         /// This is useful for unsized types.
@@ -266,7 +276,7 @@ mod lv_owned {
         /// * This will create a handle to un-initialized memory. The provided initialisation
         ///    routine must prepare the memory.
         pub(crate) unsafe fn new_unsized(
-            init_routine: impl FnOnce(&mut UHandle<'a, T>) -> Result<()>,
+            init_routine: impl FnOnce(&mut UHandle<'_, T>) -> Result<()>,
         ) -> Result<Self> {
             let handle = memory_api()?.new_handle(0);
             if handle.is_null() {
@@ -285,39 +295,47 @@ mod lv_owned {
         ///
         /// * This needs to take a mutable reference to self and lifetime annotation on UHandle,
         ///    in order to avoid creating multiple UHandles.
-        pub fn handle(&'a mut self) -> UHandle<'a, T> {
+        pub fn handle(&mut self) -> UHandle<'static, T> {
             UHandle(self.0 .0, PhantomData)
+        }
+
+        pub fn from_handle(handle: UHandle<'static, T>) -> Self {
+            Self(handle)
         }
     }
 
     /// TODO
     /// potentially expensive operation
     #[cfg(feature = "link")]
-    impl<'a, T: ?Sized> Clone for LvOwned<'a, T> {
+    impl<T> Clone for LvOwned<T>
+    where
+        T: ?Sized + ToOwned,
+        T::Owned: 'static,
+    {
         fn clone(&self) -> Self {
-            let mut cloned_handle = UHandle(std::ptr::null_mut() as *mut *mut T, PhantomData);
+            let mut cloned_handle = UHandle(std::ptr::null_mut(), PhantomData);
             unsafe {
-                self.clone_into_pointer(&mut cloned_handle as *mut UHandle<T>);
+                self.0.clone_into_pointer(&mut cloned_handle).unwrap();
             }
-            Self(cloned_handle)
+            LvOwned::from_handle(cloned_handle)
         }
     }
 
-    impl<'a, T: ?Sized> Deref for LvOwned<'a, T> {
-        type Target = UHandle<'a, T>;
+    impl<T: ?Sized> Deref for LvOwned<T> {
+        type Target = UHandle<'static, T>;
 
         fn deref(&self) -> &Self::Target {
             &self.0
         }
     }
 
-    impl<'a, T: ?Sized> DerefMut for LvOwned<'a, T> {
+    impl<T: ?Sized> DerefMut for LvOwned<T> {
         fn deref_mut(&mut self) -> &mut Self::Target {
             &mut self.0
         }
     }
 
-    impl<'a, T: ?Sized> Drop for LvOwned<'a, T> {
+    impl<T: ?Sized> Drop for LvOwned<T> {
         fn drop(&mut self) {
             let result = memory_api()
                 .map(|api| unsafe { api.dispose_handle(self.0 .0 as usize).to_result(()) });
@@ -329,16 +347,20 @@ mod lv_owned {
 
     //TODO test
     #[cfg(feature = "link")]
-    impl<'a, T: ?Sized> ToOwned for UHandle<'a, T> {
-        type Owned = LvOwned<'a, T>;
+    impl<'a, T> ToOwned for UHandle<'a, T>
+    where
+        T: ToOwned + ?Sized + 'a,
+        T::Owned: 'static,
+    {
+        type Owned = LvOwned<T::Owned>;
 
         fn to_owned(&self) -> Self::Owned {
             // calling clone_into_pointer with a nullpointer returns a new Handle
-            let mut owned_handle = UHandle(std::ptr::null_mut() as *mut *mut T, PhantomData);
+            let mut owned_handle = UHandle(std::ptr::null_mut(), PhantomData);
             unsafe {
-                self.clone_into_pointer(&mut owned_handle as *mut UHandle<T>)
-                    .unwrap();
+                self.clone_into_pointer(&mut owned_handle).unwrap();
             };
+
             LvOwned(owned_handle)
         }
     }
@@ -347,8 +369,8 @@ mod lv_owned {
 /// # Safety
 ///
 /// * LvOwned memory is access through UHandle which is managed by the Labview Memory Manager, which is thread safe
-unsafe impl<'a, T: ?Sized> Send for LvOwned<'a, T> {}
-unsafe impl<'a, T: ?Sized> Sync for LvOwned<'a, T> {}
+unsafe impl<'a, T: ?Sized> Send for LvOwned<T> {}
+unsafe impl<'a, T: ?Sized> Sync for LvOwned<T> {}
 
 #[cfg(feature = "link")]
 pub use lv_owned::LvOwned;
