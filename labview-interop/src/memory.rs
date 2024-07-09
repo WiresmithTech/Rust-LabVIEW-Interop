@@ -151,22 +151,6 @@ impl<'a, T: ?Sized> Borrow<UHandle<'a, T>> for LvOwned<'a, T> {
     }
 }
 
-//TODO test
-#[cfg(feature = "link")]
-impl<'a, T: ?Sized> ToOwned for UHandle<'a, T> {
-    type Owned = LvOwned<'a, T>;
-
-    fn to_owned(&self) -> Self::Owned {
-        // calling clone_into_pointer with a nullpointer returns a new Handle
-        let mut owned_handle = UHandle(std::ptr::null_mut() as *mut *mut T, PhantomData);
-        unsafe {
-            self.clone_into_pointer(&mut owned_handle as *mut UHandle<T>)
-                .unwrap();
-        };
-        LvOwned(owned_handle)
-    }
-}
-
 #[cfg(feature = "link")]
 impl<'a, T: ?Sized> UHandle<'a, T> {
     /// Resize the handle to the desired size.
@@ -310,6 +294,22 @@ mod lv_owned {
             if let Err(e) | Ok(Err(e)) = result {
                 println!("Error freeing handle from LV: {e}");
             }
+        }
+    }
+
+    //TODO test
+    #[cfg(feature = "link")]
+    impl<'a, T: ?Sized> ToOwned for UHandle<'a, T> {
+        type Owned = LvOwned<'a, T>;
+
+        fn to_owned(&self) -> Self::Owned {
+            // calling clone_into_pointer with a nullpointer returns a new Handle
+            let mut owned_handle = UHandle(std::ptr::null_mut() as *mut *mut T, PhantomData);
+            unsafe {
+                self.clone_into_pointer(&mut owned_handle as *mut UHandle<T>)
+                    .unwrap();
+            };
+            LvOwned(owned_handle)
         }
     }
 }

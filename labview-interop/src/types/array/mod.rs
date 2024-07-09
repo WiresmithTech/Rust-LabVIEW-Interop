@@ -171,7 +171,7 @@ impl<const D: usize, T> LVArray<D, T> {
 }
 
 /// Definition of a handle to an array. Helper for FFI definitin.
-pub type LVArrayHandle<const D: usize, T> = UHandle<LVArray<D, T>>;
+pub type LVArrayHandle<'a, const D: usize, T> = UHandle<'a, LVArray<D, T>>;
 
 #[cfg(test)]
 mod tests {

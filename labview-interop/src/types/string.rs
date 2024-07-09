@@ -56,7 +56,7 @@ pub type LStrHandle<'a> = UHandle<'a, LStr>;
 /// Definition of a pointer to an LabVIEW String. Helper for FFI definition.
 pub type LStrPtr = UPtr<LStr>;
 /// Definition of an owned LStr Handle.
-pub type LStrOwned<'a> = LvOwned<'a, LStr>;
+pub type LStrOwned = LvOwned<LStr>;
 
 impl LStr {
     /// Access the data from the string as a binary slice.
@@ -208,7 +208,7 @@ impl<'a> LStrHandle<'a> {
 }
 
 #[cfg(feature = "link")]
-impl<'a> LStrOwned<'a> {
+impl LStrOwned {
     /// Create a new owned `LStr` with a size of zero.
     pub fn new() -> Result<Self> {
         unsafe { LvOwned::<LStr>::new_unsized(|handle| handle.set(&[])) }
