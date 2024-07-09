@@ -211,7 +211,7 @@ mod lv_owned {
     ///
     /// This means it can be used in structs in place of a handle.
     ///
-    /// # Example In Struct (LStrOwned is equivalent of LvOwned<LStr>).
+    /// # Example In Struct (LStrOwned is equivalent of `LvOwned<LStr>`).
     /// ```no_run
     ///# use labview_interop::labview_layout;
     ///# use labview_interop::types::LStrOwned;
