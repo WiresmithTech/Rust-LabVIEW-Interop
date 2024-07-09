@@ -4,10 +4,10 @@ use labview_interop::labview_layout;
 use labview_interop::types::{LVArrayHandle, LVVariant, Waveform};
 
 labview_layout!(
-    pub struct TestStruct {
+    pub struct TestStruct<'a> {
         one: u8,
         two: u16,
-        waveform: Waveform<f64>,
+        waveform: Waveform<'a, f64>,
         three: u32,
     }
 );
@@ -23,8 +23,8 @@ pub extern "C" fn extract_test_struct_with_waveform(
     three: *mut u32,
     wv_first: *mut f64,
     wv_last: *mut f64,
-) {
-    let _result = std::panic::catch_unwind(|| unsafe {
+) -> i32 {
+    let result = std::panic::catch_unwind(|| unsafe {
         let test = test_struct.as_ref().unwrap();
         let waveform_data = test.waveform.data.as_ref().unwrap().data_as_slice();
         *one = test.one;
@@ -33,6 +33,13 @@ pub extern "C" fn extract_test_struct_with_waveform(
         *wv_first = waveform_data[0];
         *wv_last = waveform_data[waveform_data.len() - 1]
     });
+
+    if result.is_err() {
+        -1
+    }
+    else {
+        0
+    }
 }
 
 ///Similar to above we have a seperate 32 bit and 64 bit version
@@ -60,9 +67,9 @@ pub extern "C" fn extract_test_struct_with_waveform(
 }
 
 labview_layout!(
-    pub struct ClusterHandles {
-        array1: LVArrayHandle<1, u8>,
-        array2: LVArrayHandle<2, u32>,
+    pub struct ClusterHandles<'a> {
+        array1: LVArrayHandle<'a, 1, u8>,
+        array2: LVArrayHandle<'a, 2, u32>,
     }
 );
 
@@ -87,9 +94,9 @@ pub extern "C" fn extract_cluster_handles(
 }
 
 labview_layout!(
-    pub struct ClusterVariant {
+    pub struct ClusterVariant<'a> {
         one: u64,
-        variant: LVVariant,
+        variant: LVVariant<'a>,
         two: u32,
     }
 );

@@ -12,11 +12,11 @@ pub extern "C" fn handle_validity_checks(
 ) {
     unsafe {
         *valid = valid_handle.valid().into();
-        let null_handle: UHandle<f64> = UHandle(std::ptr::null_mut());
+        let null_handle: UHandle<f64> = UHandle(std::ptr::null_mut(), Default::default());
         *null = null_handle.valid().into();
         // This crashes if the initial handle is garbage so create a valid pointer to an invalid pointer.
         let mut made_up_ptr = 0xDEAD as *mut f64;
-        let madeup_handle: UHandle<f64> = UHandle(&mut made_up_ptr as *mut *mut f64);
+        let madeup_handle: UHandle<f64> = UHandle(&mut made_up_ptr as *mut *mut f64, Default::default());
         *random_address = madeup_handle.valid().into();
     }
 }
