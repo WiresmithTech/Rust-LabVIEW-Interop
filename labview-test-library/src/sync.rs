@@ -14,7 +14,7 @@ pub extern "C" fn generate_event_3(lv_user_event: *mut LVUserEvent<i32>) -> MgEr
 }
 
 labview_layout!(
-    pub struct UserEventCluster {
+    pub struct UserEventClusterOwned {
         eventno: i32,
         id: LStrOwned,
     }
@@ -22,10 +22,10 @@ labview_layout!(
 
 #[no_mangle]
 pub extern "C" fn generate_event_cluster(
-    lv_user_event: UPtr<LVUserEvent<UserEventCluster>>,
+    lv_user_event: UPtr<LVUserEvent<UserEventClusterOwned>>,
 ) -> MgErr {
     let mystr = LStrOwned::from_data(b"Hello World!").unwrap();
-    let mut eventdata = UserEventCluster {
+    let mut eventdata = UserEventClusterOwned {
         eventno: 2,
         id: mystr,
     };

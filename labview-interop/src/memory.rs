@@ -172,8 +172,6 @@ impl<'a, T: ?Sized> DerefMut for UHandle<'a, T> {
     }
 }
 
-
-
 #[cfg(feature = "link")]
 impl<'a, T: ?Sized> UHandle<'a, T> {
     /// Resize the handle to the desired size.
@@ -275,16 +273,74 @@ mod lv_owned {
             }
         }
 
-        /// TODO test
         /// Return a new handle to the inner value.
         ///
         /// This takes a mutable borrow on the owned value as you can use the handle
         /// to modify the inner value.
         ///
+        /// Note: This is only if you need a true handle to put into a structure that is expecting this.
+        /// Better options are :
+        /// * If you can define the type, just define it with the owned value. An owned value can take the place of a handle.
+        /// * If you just need access to the data then use the Deref methods to access the handle.
+        ///
         /// # Safety
         ///
         /// * This needs to take a mutable reference to self and lifetime annotation on UHandle,
         ///    in order to avoid creating multiple UHandles.
+        ///
+        /// # Examples
+        ///
+        /// ## Use Handle in Struct
+        ///
+        /// ```no_run
+        /// use labview_interop::types::{LStrHandle, LStrOwned};
+        /// use labview_interop::labview_layout;
+        ///
+        /// // This must have a handle due to other uses.
+        /// labview_layout! {
+        ///   struct ClusterWithString<'a> {
+        ///     string_handle: LStrHandle<'a>
+        ///   }
+        /// }
+        ///
+        /// // Mutable is required since once you have a handle you can mutate the data.
+        /// let mut owned_string = LStrOwned::from_data(b"Hello World!").unwrap();
+        /// let handle = owned_string.handle_to_inner();
+        /// let cluster = ClusterWithString {
+        ///   string_handle: handle
+        /// };
+        /// // Do something with the cluster.
+        ///
+        /// ```
+        ///
+        /// ## Lifetime Guarantees - Single Handle
+        /// ```compile_fail,E0515
+        /// use labview_interop::memory::LvOwned;
+        ///
+        /// let mut owned = LvOwned::<f64>::new().unwrap();
+        /// let mut handle = owned.handle_to_inner();
+        /// // Cannot get a second handle due to lifetime.
+        /// // This fails to compile.
+        /// let handle2 = owned.handle_to_inner();
+        ///
+        /// *handle = 1.0;
+        ///
+        /// ```
+        ///
+        /// ## Lifetime Guarantees - Owned Outlives Handle
+        ///
+        /// ```compile_fail,E0515
+        /// use labview_interop::memory::LvOwned;
+        ///
+        /// let mut owned = LvOwned::<f64>::new().unwrap();
+        /// let mut handle = owned.handle_to_inner();
+        /// // Cannot drop owned because we have a handle.
+        /// // This fails to compile.
+        /// drop(owned);
+        ///
+        /// *handle = 1.0;
+        ///
+        /// ```
         pub fn handle_to_inner(&mut self) -> UHandle<'_, T> {
             UHandle(self.0 .0, PhantomData)
         }
@@ -328,10 +384,8 @@ mod lv_owned {
         ///
         /// * If there is not enough memory to create the handle this may error.
         unsafe fn try_to_owned(&self) -> Result<LvOwned<T>> {
-            LvOwned::new_unsized(|handle| {
-                unsafe {
-                    self.clone_into_pointer(handle as *mut UHandle<'_, T>)
-                }
+            LvOwned::new_unsized(|handle| unsafe {
+                self.clone_into_pointer(handle as *mut UHandle<'_, T>)
             })
         }
     }
@@ -342,7 +396,6 @@ mod lv_owned {
     unsafe impl<T: ?Sized> Send for LvOwned<T> {}
     unsafe impl<T: ?Sized> Sync for LvOwned<T> {}
 }
-
 
 #[cfg(feature = "link")]
 pub use lv_owned::LvOwned;
