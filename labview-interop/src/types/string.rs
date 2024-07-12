@@ -2,12 +2,14 @@
 //! interface provides.
 //!
 
-use encoding_rs::Encoding;
-use std::borrow::Cow;
-
+#[cfg(feature = "link")]
 use crate::errors::Result;
 use crate::labview_layout;
+#[cfg(feature = "link")]
+use crate::memory::LvOwned;
 use crate::memory::{UHandle, UPtr};
+use encoding_rs::Encoding;
+use std::borrow::Cow;
 
 #[cfg(target_os = "windows")]
 fn get_encoding() -> &'static Encoding {
@@ -52,9 +54,12 @@ labview_layout!(
 
 /// Definition of a handle to an LabVIEW String. Helper for FFI definition and
 /// required for any functions that need to resize the string.
-pub type LStrHandle = UHandle<LStr>;
+pub type LStrHandle<'a> = UHandle<'a, LStr>;
 /// Definition of a pointer to an LabVIEW String. Helper for FFI definition.
 pub type LStrPtr = UPtr<LStr>;
+/// Definition of an owned LStr Handle.
+#[cfg(feature = "link")]
+pub type LStrOwned = LvOwned<LStr>;
 
 impl LStr {
     /// Access the data from the string as a binary slice.
@@ -108,7 +113,7 @@ impl LStr {
     ///    format!("Read value: {string_value}");
     ///    MgErr::NO_ERROR
     /// }
-    //```
+    ///```
     pub fn to_rust_string(&self) -> Cow<str> {
         self.to_rust_string_with_encoding(&LV_ENCODING)
     }
@@ -137,47 +142,7 @@ impl PartialEq for LStr {
 ///
 /// Requires the link feature.
 #[cfg(feature = "link")]
-impl LStrHandle {
-    pub fn from_lstr(lstr_in: &LStr) -> Result<Self> {
-        let handle = UHandle::<LStr>::new(lstr_in.size())?;
-        unsafe {
-            let l_str = handle.as_ref_mut()?;
-            l_str.size = lstr_in.size;
-            std::ptr::copy_nonoverlapping(
-                lstr_in.data.as_ptr(),
-                l_str.data.as_mut_ptr(),
-                l_str.size as usize,
-            );
-        }
-
-        Ok(handle)
-    }
-
-    ///
-    /// # Example
-    /// ```
-    /// use labview_interop::types::{LStr, LStrHandle};
-    /// use labview_interop::errors::MgErr;
-    /// #[no_mangle]
-    /// pub extern "C" fn hello_world(mut strn: String) -> LStrHandle {
-    ///    let handle = LStrHandle<LStr>::from_data(strn.as_bytes()).unwrap(); // is == UHandle<LStr>
-    ///    handle
-    /// }
-    /// ```
-    pub fn from_data(data: &[u8]) -> Result<Self> {
-        let handle = UHandle::<LStr>::new(LStr::size_with_data(data))?;
-        unsafe {
-            let l_str = handle.as_ref_mut()?;
-            l_str.size = data.len() as i32;
-            std::ptr::copy_nonoverlapping(
-                data.as_ptr(),
-                l_str.data.as_mut_ptr(),
-                l_str.size as usize,
-            );
-        }
-
-        Ok(handle)
-    }
+impl<'a> LStrHandle<'a> {
     /// Set the string as a binary value against the handle.
     ///
     /// This function will resize the handle based on the size of the input value.
@@ -242,5 +207,29 @@ impl LStrHandle {
     pub fn set_str_with_encoding(&mut self, encoder: &'static Encoding, value: &str) -> Result<()> {
         let (buffer, _, _) = encoder.encode(value);
         self.set(&buffer)
+    }
+}
+
+#[cfg(feature = "link")]
+impl LStrOwned {
+    /// Create a new owned `LStr` with a size of zero.
+    pub fn new() -> Result<Self> {
+        unsafe { LvOwned::<LStr>::new_unsized(|handle| handle.set(&[])) }
+    }
+    ///
+    /// # Example
+    /// ```
+    /// use labview_interop::types::{LStrHandle, LStrOwned};
+    /// use labview_interop::errors::MgErr;
+    /// #[no_mangle]
+    /// pub extern "C" fn hello_world(mut strn: String, output_string: *mut LStrHandle) {
+    ///    let handle = LStrOwned::from_data(strn.as_bytes()).unwrap();
+    ///    unsafe {
+    ///        handle.clone_into_pointer(output_string).unwrap();
+    ///    }
+    /// }
+    /// ```
+    pub fn from_data(data: &[u8]) -> Result<Self> {
+        unsafe { LvOwned::<LStr>::new_unsized(|handle| handle.set(data)) }
     }
 }

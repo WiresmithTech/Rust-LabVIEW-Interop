@@ -31,21 +31,21 @@ macro_rules! array_with_dim {
         }
 
         // Implement the copy methods.
-        impl<'array, T: Copy + NumericArrayResizable + 'array> LVArrayHandle<$dim, T> {
+        impl<'array, T: Copy + NumericArrayResizable + 'array> LVArrayHandle<'array, $dim, T> {
             /// Set the LabVIEW array from the ND Array.
             ///
             /// It will resize the array to match the dimensions if required.
-            pub fn copy_from_ndarray(
+            pub fn copy_from_ndarray<'a>(
                 &mut self,
-                array: impl Into<ArrayView<'array, T, Dim<[Ix; $dim]>>>,
-            ) -> Result<()> {
+                array: impl Into<ArrayView<'a, T, Dim<[Ix; $dim]>>>,
+            ) -> Result<()> where T: 'a {
                 self.copy_from_ndarray_view(array.into())
             }
 
-            fn copy_from_ndarray_view(
+            fn copy_from_ndarray_view<'a>(
                 &mut self,
-                array: ArrayView<'array, T, Dim<[Ix; $dim]>>,
-            ) -> Result<()> {
+                array: ArrayView<'a, T, Dim<[Ix; $dim]>>,
+            ) -> Result<()> where T: 'a {
                 // If the size isn't right either resize if available or error.
                 if array.raw_dim() != self.ndarray_dim() {
                     #[cfg(feature = "link")]

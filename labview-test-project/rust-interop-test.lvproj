@@ -1,5 +1,6 @@
 ﻿<?xml version='1.0' encoding='UTF-8'?>
 <Project Type="Project" LVVersion="20008000">
+	<Property Name="NI.LV.All.SaveVersion" Type="Str">20.0</Property>
 	<Property Name="NI.LV.All.SourceOnly" Type="Bool">true</Property>
 	<Property Name="NI.Project.Description" Type="Str"></Property>
 	<Item Name="My Computer" Type="My Computer">
@@ -14,6 +15,7 @@
 		<Property Name="specify.custom.address" Type="Bool">false</Property>
 		<Item Name="CString vs LStr Performance Comparison.vi" Type="VI" URL="../CString vs LStr Performance Comparison.vi"/>
 		<Item Name="Data Structure Tests.lvclass" Type="LVClass" URL="../Data Structure Tests/Data Structure Tests.lvclass"/>
+		<Item Name="Memory Manager Tests.lvclass" Type="LVClass" URL="../Memory Manager Tests/Memory Manager Tests.lvclass"/>
 		<Item Name="String Tests.lvclass" Type="LVClass" URL="../String Tests/String Tests.lvclass"/>
 		<Item Name="Sync Tests.lvclass" Type="LVClass" URL="../Sync Tests/Sync Tests.lvclass"/>
 		<Item Name="test negative timestamp.vi" Type="VI" URL="../Timestamp Tests/test negative timestamp.vi"/>

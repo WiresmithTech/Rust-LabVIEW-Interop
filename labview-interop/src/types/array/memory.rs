@@ -48,7 +48,7 @@ impl NumericArrayResizable for f64 {
     const TYPE_CODE: i32 = 0x0A;
 }
 
-impl<const D: usize, T: NumericArrayResizable> LVArrayHandle<D, T> {
+impl<'array, const D: usize, T: NumericArrayResizable> LVArrayHandle<'array, D, T> {
     /// Resize the array to the new size.
     pub fn resize_array(&mut self, new_dims: LVArrayDims<D>) -> Result<()> {
         // Check if they match so resize isn't needed.

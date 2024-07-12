@@ -241,6 +241,8 @@ pub enum LVInteropError {
         "Array dimensions don't match. You may require the link feature to enable auto-resizing."
     )]
     ArrayDimensionMismatch,
+    #[error("Creating of handle in LabVIEW memory manager failed. Perhaps you are out of memory?")]
+    HandleCreationFailed,
 }
 
 pub type Result<T> = std::result::Result<T, LVInteropError>;
@@ -253,6 +255,7 @@ impl From<LVInteropError> for MgErr {
             LVInteropError::NoLabviewApi => MgErr(-2),
             LVInteropError::ArrayDimensionsOutOfRange => MgErr(-3),
             LVInteropError::ArrayDimensionMismatch => MgErr(-3),
+            LVInteropError::HandleCreationFailed => MgErr(-4),
         }
     }
 }
