@@ -183,19 +183,68 @@ impl<'a, T: ?Sized> UHandle<'a, T> {
         let err = crate::labview::memory_api()?.set_handle_size(self.0 as usize, desired_size);
         err.to_result(())
     }
+}
 
+#[cfg(feature = "link")]
+impl<'a, T: ?Sized + 'static> UHandle<'a, T> {
     /// Copy the contents of one handle into another.
     ///
     /// If other points to a null value then this will allocate a handle for the contents.
+    ///
+    /// The data in the handle must be `'static` or copy as this will only perform a shallow copy.
     ///
     /// # Safety
     ///
     /// * If the other pointer is invalid this may cause UB.
     /// * If the other pointer points to null, you must wrap the value as an owned handle otherwise it will leak memory.
-    // pub unsafe fn clone_into_pointer2(&self, other: *mut Self) -> Result<()> {
-    //     let error = crate::labview::memory_api()?.copy_handle(other as *mut usize, self.0 as usize);
-    //     error.to_result(())
-    // }
+    ///
+    /// # Examples
+    ///
+    /// ## Allowed Types
+    /// ```no_run
+    /// use labview_interop::labview_layout;
+    /// use labview_interop::memory::{UHandle, LvOwned};
+    /// use labview_interop::types::LStrHandle;
+    ///
+    /// labview_layout! {
+    ///   #[derive(Copy, Clone)]
+    ///   struct ClusterWithNumbers {
+    ///     float: f64,
+    ///     int: i32
+    ///   }
+    /// }
+    ///
+    /// fn copy_handles(input: UHandle<ClusterWithNumbers>) {
+    ///   let cluster = ClusterWithNumbers { float: 3.14, int: 42 };
+    ///   let mut new_owned = LvOwned::new(&cluster).unwrap();
+    ///   unsafe {
+    ///     let mut target_handle = new_owned.handle_to_inner();
+    ///     input.clone_into_pointer(&mut target_handle).unwrap();
+    ///   }
+    /// }
+    /// ```
+    ///
+    /// ## Lifetime Guarantees - Fails with Sub-Handles
+    /// ```compile_fail,E0521
+    /// use labview_interop::labview_layout;
+    /// use labview_interop::memory::{UHandle, LvOwned};
+    /// use labview_interop::types::LStrHandle;
+    ///
+    /// labview_layout! {
+    ///   struct ClusterWithString<'a> {
+    ///     string_handle: LStrHandle<'a>,
+    ///     int: i32
+    ///   }
+    /// }
+    ///
+    /// fn copy_handles(input: UHandle<ClusterWithString>) {
+    ///   let mut new_owned = LvOwned::<ClusterWithString>::new().unwrap();
+    ///   unsafe {
+    ///     let mut target_handle = new_owned.handle_to_inner();
+    ///     input.clone_into_pointer(&mut target_handle).unwrap();
+    ///   }
+    /// }
+    /// ```
     pub unsafe fn clone_into_pointer(&self, other: *mut UHandle<'_, T>) -> Result<()> {
         let error = crate::labview::memory_api()?.copy_handle(other as *mut usize, self.0 as usize);
         error.to_result(())
@@ -239,14 +288,19 @@ mod lv_owned {
     #[repr(transparent)]
     pub struct LvOwned<T: ?Sized + 'static>(UHandle<'static, T>);
 
-    impl<T: Sized> LvOwned<T> {
+    impl<T: Copy + 'static> LvOwned<T> {
         /// Create a new handle to a sized value of `T`.
-        pub fn new() -> Result<Self> {
-            let handle = unsafe { memory_api()?.new_handle(std::mem::size_of::<T>()) };
+        ///
+        /// It will copy the data from the provided value.
+        pub fn new(value: &T) -> Result<Self> {
+            let handle = unsafe { memory_api()?.new_handle(std::mem::size_of::<T>()) } as *mut *mut T;
+
             if handle.is_null() {
                 Err(LVInteropError::HandleCreationFailed)
             } else {
-                Ok(Self(UHandle(handle as *mut *mut T, PhantomData)))
+                // Copy the value into the handle.
+                unsafe { **handle = *value; }
+                Ok(Self(UHandle(handle, PhantomData)))
             }
         }
     }
@@ -261,7 +315,7 @@ mod lv_owned {
         /// * This will create a handle to un-initialized memory. The provided initialisation
         ///    routine must prepare the memory.
         pub(crate) unsafe fn new_unsized(
-            init_routine: impl FnOnce(&mut UHandle<'_, T>) -> Result<()>,
+            init_routine: impl FnOnce(&mut UHandle<'static, T>) -> Result<()>,
         ) -> Result<Self> {
             let handle = memory_api()?.new_handle(0);
             if handle.is_null() {
@@ -370,7 +424,7 @@ mod lv_owned {
         }
     }
 
-    impl<'a, T: ?Sized> UHandle<'a, T> {
+    impl<'a, T: Sized + 'static> UHandle<'a, T> {
         /// Try to create an owned handle from the current handle.
         ///
         /// The owned handle will have its own handle to the data and
@@ -385,7 +439,7 @@ mod lv_owned {
         /// * If there is not enough memory to create the handle this may error.
         unsafe fn try_to_owned(&self) -> Result<LvOwned<T>> {
             LvOwned::new_unsized(|handle| unsafe {
-                self.clone_into_pointer(handle as *mut UHandle<'_, T>)
+                self.clone_into_pointer(handle as *mut UHandle<'static, T>)
             })
         }
     }
@@ -406,9 +460,3 @@ pub use lv_owned::LvOwned;
 #[doc(hidden)]
 pub struct MagicCookie(u32);
 
-// test
-// 1. LvOwned.clone()
-// * Clone simple LvOwned
-// * Clone struct also containing LvOwned / UHandle
-// 2. UHandle.to_owned()
-// 3. Send / Sync

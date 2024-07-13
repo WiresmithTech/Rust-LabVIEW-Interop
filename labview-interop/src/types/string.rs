@@ -213,7 +213,7 @@ impl<'a> LStrHandle<'a> {
 #[cfg(feature = "link")]
 impl LStrOwned {
     /// Create a new owned `LStr` with a size of zero.
-    pub fn new() -> Result<Self> {
+    pub fn empty_string() -> Result<Self> {
         unsafe { LvOwned::<LStr>::new_unsized(|handle| handle.set(&[])) }
     }
     ///
