@@ -7,6 +7,16 @@ use std::ops::{Deref, DerefMut};
 
 use crate::errors::{LVInteropError, Result};
 
+/// A trait which defines that a type should be copyable inside
+/// of a LabVIEW handle.
+///
+/// This is unique from `Copy` since unsized types can be inside a handle
+/// but they can't implement `Copy`.
+pub trait LvCopy {}
+
+/// Rust copy types should be copyable in LabVIEW.
+impl<T: Copy> LvCopy for T {}
+
 /// A pointer from LabVIEW for the data.
 #[repr(transparent)]
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -186,7 +196,7 @@ impl<'a, T: ?Sized> UHandle<'a, T> {
 }
 
 #[cfg(feature = "link")]
-impl<'a, T: ?Sized + 'static> UHandle<'a, T> {
+impl<'a, T: ?Sized + LvCopy + 'static> UHandle<'a, T> {
     /// Copy the contents of one handle into another.
     ///
     /// If other points to a null value then this will allocate a handle for the contents.
@@ -245,6 +255,25 @@ impl<'a, T: ?Sized + 'static> UHandle<'a, T> {
     ///   }
     /// }
     /// ```
+    /// ## Lifetime Guarantees - Fails with Owned Handle
+    /// ```compile_fail
+    /// use labview_interop::labview_layout;
+    /// use labview_interop::memory::{UHandle, LvOwned};
+    /// use labview_interop::types::LStrOwned;
+    ///
+    /// labview_layout! {
+    ///   struct ClusterWithString {
+    ///     string_handle: LStrOwned,
+    ///     int: i32
+    ///   }
+    /// }
+    ///
+    /// fn copy_handles(input: UHandle<ClusterWithString>, mut output: UHandle<ClusterWithString>) {
+    ///   unsafe {
+    ///     input.clone_into_pointer(&mut output).unwrap();
+    ///   }
+    /// }
+    /// ```
     pub unsafe fn clone_into_pointer(&self, other: *mut UHandle<'_, T>) -> Result<()> {
         let error = crate::labview::memory_api()?.copy_handle(other as *mut usize, self.0 as usize);
         error.to_result(())
@@ -262,7 +291,7 @@ mod lv_owned {
     use std::marker::PhantomData;
     use std::ops::{Deref, DerefMut};
 
-    use super::UHandle;
+    use super::{LvCopy, UHandle};
     use crate::errors::{LVInteropError, Result};
     use crate::labview::memory_api;
 
@@ -424,7 +453,7 @@ mod lv_owned {
         }
     }
 
-    impl<'a, T: Sized + 'static> UHandle<'a, T> {
+    impl<'a, T: LvCopy + 'static> UHandle<'a, T> {
         /// Try to create an owned handle from the current handle.
         ///
         /// The owned handle will have its own handle to the data and

@@ -7,7 +7,7 @@ use crate::errors::Result;
 use crate::labview_layout;
 #[cfg(feature = "link")]
 use crate::memory::LvOwned;
-use crate::memory::{UHandle, UPtr};
+use crate::memory::{LvCopy, UHandle, UPtr};
 use encoding_rs::Encoding;
 use std::borrow::Cow;
 
@@ -51,6 +51,9 @@ labview_layout!(
         data: [u8],
     }
 );
+
+/// Copyable inside a handle.
+impl LvCopy for LStr {}
 
 /// Definition of a handle to an LabVIEW String. Helper for FFI definition and
 /// required for any functions that need to resize the string.
