@@ -3,7 +3,7 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 lv_ver := "2020"
 
 unit-tests:
-  cargo test --features chrono
+  cargo test --no-default-features --features chrono,ndarray
 
 integration-tests:
   cargo build -p labview-test-library
