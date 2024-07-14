@@ -56,6 +56,7 @@ labview_layout! {
 }
 
 /// Copy the data from Rust to a LabVIEW cluster.
+#[cfg(target_pointer_width = "64")]
 #[no_mangle]
 pub extern "C" fn copy_cluster_data(
     output_cluster: *mut WrappedClusterWithString,
@@ -66,4 +67,35 @@ pub extern "C" fn copy_cluster_data(
         string.clone_into_pointer(inner_string as *mut LStrHandle)
     };
     result.into()
+}
+
+/// Clone a handle and change with no change to the original.
+///
+/// We should be able to change one without the other changing.
+#[no_mangle]
+pub extern "C" fn handle_to_owned(
+    input: LStrHandle,
+    output: *mut LStrHandle,
+) -> MgErr {
+    let result = unsafe {
+        let mut owned_input = input.try_to_owned().unwrap();
+        owned_input.set_str("Changed!").unwrap();
+        owned_input.clone_into_pointer(output)
+    };
+    result.into()
+}
+
+/// Cloning a handle should not change the original.
+#[no_mangle]
+pub extern "C" fn clone_handle(
+    out1: *mut LStrHandle,
+    out2: *mut LStrHandle,
+) {
+    let original = LStrOwned::from_data(b"Original").unwrap();
+    let mut changed = original.clone();
+    changed.set_str("Changed").unwrap();
+    unsafe {
+        original.clone_into_pointer(out1).unwrap();
+        changed.clone_into_pointer(out2).unwrap();
+    };
 }

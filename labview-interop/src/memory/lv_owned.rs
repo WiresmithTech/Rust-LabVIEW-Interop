@@ -1,4 +1,3 @@
-
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
@@ -7,7 +6,7 @@ use super::{LvCopy, UHandle};
 use crate::errors::{LVInteropError, Result};
 use crate::labview::memory_api;
 
-/// A value allocated in the LabVIEW memory managed by us.
+/// A value allocated in the LabVIEW memory managed by Rust.
 ///
 /// This will manage the lifetime and free the handle on drop.
 ///
@@ -15,7 +14,7 @@ use crate::labview::memory_api;
 ///
 /// This means it can be used in structs in place of a handle.
 ///
-/// # Example In Struct (LStrOwned is equivalent of `LvOwned<LStr>`).
+/// # Example In Struct ([LStrOwned](crate::types::LStrOwned) is equivalent of [`LvOwned<LStr>`]).
 /// ```no_run
 ///# use labview_interop::labview_layout;
 ///# use labview_interop::types::LStrOwned;
@@ -26,6 +25,30 @@ use crate::labview::memory_api;
 ///}
 ///);
 ///```
+/// # From a Handle
+///
+/// You can convert a handle to an owned value using the [`UHandle::try_to_owned`] method.
+///
+/// The type must be [`LvCopy`] to ensure it is safe to copy the internal data.
+///
+/// ## Example
+/// ```no_run
+/// use labview_interop::types::{LStrHandle, LStrOwned};;
+///
+/// fn handle_to_owned(handle: LStrHandle) -> LStrOwned {
+///    handle.try_to_owned().unwrap()
+/// }
+/// ```
+///
+/// # Clone
+///
+/// Clone is implemented but can panic if there is not enough memory to create the new handle.
+///
+/// There is also a [`LvOwned::try_clone`] method which will return a Result.
+///
+/// The type must be [`LvCopy`] to ensure it is safe to clone.
+///
+///
 #[repr(transparent)]
 pub struct LvOwned<T: ?Sized + 'static>(UHandle<'static, T>);
 
@@ -172,23 +195,50 @@ impl<T: Debug> Debug for LvOwned<T> {
     }
 }
 
-impl<'a, T: LvCopy + 'static> UHandle<'a, T> {
+impl<T: ?Sized + LvCopy + 'static> LvOwned<T> {
+    /// Try to clone the handle.
+    ///
+    /// This will create a new handle to the same data.
+    ///
+    /// # Errors
+    ///
+    /// * If there is not enough memory to create the handle this may error.
+    pub fn try_clone(&self) -> Result<Self> {
+        // Safety - The handle should be valid because it is an owned handle.
+        // Safety - The initialisation function will initialise the data or error.
+        unsafe {
+            LvOwned::new_unsized(|handle| {
+                self.clone_into_pointer(handle as *mut UHandle<'static, T>)
+            })
+        }
+    }
+
+}
+
+impl<'a, T: ?Sized + LvCopy + 'static> UHandle<'a, T> {
     /// Try to create an owned handle from the current handle.
     ///
     /// The owned handle will have its own handle to the data and
     /// will be responsible for freeing it.
     ///
-    /// # Safety
-    ///
-    /// * If the source handle is null, this may cause UB.
-    ///
     /// # Errors
     ///
     /// * If there is not enough memory to create the handle this may error.
-    unsafe fn try_to_owned(&self) -> Result<LvOwned<T>> {
-        LvOwned::new_unsized(|handle| unsafe {
-            self.clone_into_pointer(handle as *mut UHandle<'static, T>)
-        })
+    /// * If the source handle is not valid this will error.
+    pub fn try_to_owned(&self) -> Result<LvOwned<T>> {
+        // Safety - The clone_into_pointer will check the handle is valid.
+        // Safety - The initialisation function will initialise the data or error.
+        unsafe {
+            LvOwned::new_unsized(|handle| {
+                self.clone_into_pointer(handle as *mut UHandle<'static, T>)
+            })
+        }
+    }
+}
+
+impl<T: ?Sized + LvCopy + 'static> Clone for LvOwned<T> {
+    fn clone(&self) -> Self {
+        self.try_clone().unwrap()
     }
 }
 

@@ -222,6 +222,10 @@ impl<'a, T: ?Sized + LvCopy + 'static> UHandle<'a, T> {
     /// }
     /// ```
     pub unsafe fn clone_into_pointer(&self, other: *mut UHandle<'_, T>) -> crate::errors::Result<()> {
+        // Validate this handle first to improve safety.
+        if !self.valid() {
+            return Err(LVInteropError::InvalidHandle);
+        }
         let error = crate::labview::memory_api()?.copy_handle(other as *mut usize, self.0 as usize);
         error.to_result(())
     }
