@@ -6,6 +6,9 @@ use labview_interop::{
     errors::MgErr,
     types::{LVArrayHandle, LVBool},
 };
+use labview_interop::errors::LVInteropError;
+use labview_interop::types::array::LVArrayOwned;
+
 #[no_mangle]
 pub extern "C" fn extract_from_array(
     array_handle: LVArrayHandle<1, f64>,
@@ -66,4 +69,26 @@ pub extern "C" fn is_array_empty(array_handle: LVArrayHandle<1, f64>, empty: *mu
     let size = array_handle.element_count();
     unsafe { *empty = (size == 0).into() }
     MgErr::NO_ERROR
+}
+
+#[no_mangle]
+pub extern "C" fn empty_owned_array_initialisation(array_handle: *mut LVArrayHandle<1, f64>) -> MgErr {
+
+    fn inner(array_handle: *mut LVArrayHandle<1, f64>) -> Result<(), LVInteropError> {
+        let mut array = LVArrayOwned::<1, f64>::new_empty()?;
+        array.resize_array([5].into())?;
+        for index in 0..5 {
+            // keeps it compatible with 32 bit.
+            unsafe {
+                array.set_value_unchecked(index, index as f64);
+            }
+        }
+        unsafe {
+            array.clone_into_pointer(array_handle)?;
+        }
+
+        Ok(())
+
+    }
+    inner(array_handle).into()
 }

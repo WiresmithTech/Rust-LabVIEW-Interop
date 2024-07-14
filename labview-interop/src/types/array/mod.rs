@@ -1,6 +1,7 @@
 //! The arrays module covers LabVIEW multidimensional array.
 //!
 
+
 #[cfg(feature = "link")]
 mod memory;
 #[cfg(all(feature = "ndarray", target_pointer_width = "64"))]
@@ -8,7 +9,7 @@ mod ndarray;
 
 use crate::errors::LVInteropError;
 use crate::labview_layout;
-use crate::memory::UHandle;
+use crate::memory::{LVCopy, OwnedUHandle, UHandle};
 
 #[repr(transparent)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -78,6 +79,8 @@ labview_layout!(
         data: T,
     }
 );
+
+impl<const D: usize, T> LVCopy for LVArray<D, T> {}
 
 ///implement a basic, unsafe API that works for packed usage on 32 bit targets.
 ///
@@ -157,10 +160,10 @@ impl<const D: usize, T> LVArray<D, T> {
         unsafe { std::slice::from_raw_parts(self.data.as_ptr(), size) }
     }
 
-    /// Get the data component as a muteable slice.
+    /// Get the data component as a mutable slice.
     ///
-    /// Note: for muti-dimension arrays this is a raw structure so you will
-    /// need to understand the dimenisons and data ordering.
+    /// Note: for multi-dimension arrays this is a raw structure so you will
+    /// need to understand the dimensions and data ordering.
     ///
     /// For 1D arrays this can just be used as the data contents.
     pub fn data_as_slice_mut(&mut self) -> &mut [T] {
@@ -170,8 +173,13 @@ impl<const D: usize, T> LVArray<D, T> {
     }
 }
 
-/// Definition of a handle to an array. Helper for FFI definitin.
+/// Definition of a handle to an array. Helper for FFI definition.
 pub type LVArrayHandle<'a, const D: usize, T> = UHandle<'a, LVArray<D, T>>;
+
+/// Definition of an owned handle to an array. Helper for FFI definition.
+pub type LVArrayOwned<const D: usize, T> = OwnedUHandle<LVArray<D, T>>;
+
+
 
 #[cfg(test)]
 mod tests {

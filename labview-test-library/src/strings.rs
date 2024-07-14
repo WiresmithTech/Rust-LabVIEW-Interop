@@ -13,7 +13,7 @@ pub extern "C" fn hello_world(mut string: LStrHandle) -> MgErr {
 }
 
 #[no_mangle]
-pub extern "C" fn hello_world_owned(string: *mut LStrHandle) -> MgErr {
+pub extern "C" fn hello_world_owned(string: *mut LStrHandle<'static>) -> MgErr {
     let result = LStrOwned::from_data("Hello World".as_bytes());
 
     match result {

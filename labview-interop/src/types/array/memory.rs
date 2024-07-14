@@ -1,7 +1,32 @@
 //! Memory manager functions for arrays.
 
-use super::{LVArrayDims, LVArrayHandle};
+use super::{LVArrayDims, LVArrayHandle, LVArrayOwned};
 use crate::errors::Result;
+use crate::memory::OwnedUHandle;
+
+
+impl <const D: usize, T: NumericArrayResizable + Sized + Copy> LVArrayOwned<D, T> {
+    /// Create a new empty owned array. Once created you can use
+    /// the existing handle methods to manipulate the data.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use labview_interop::types::LVArrayOwned;
+    ///
+    /// let mut array = LVArrayOwned::<1, f64>::new_empty().unwrap();
+    /// array.resize_array([10].into()).unwrap();
+    /// ```
+    ///
+    pub fn new_empty() -> Result<Self> {
+        unsafe {
+            OwnedUHandle::new_unsized(|handle: &mut LVArrayHandle<D, T>| {
+                handle.resize_array(LVArrayDims([0; D]))?;
+                Ok(())
+            })
+        }
+    }
+}
 
 pub trait NumericArrayResizable {
     /// The code used by the LabVIEW memory manager to represent the type.

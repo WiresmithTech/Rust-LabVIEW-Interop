@@ -1,3 +1,4 @@
+
 use labview_interop::types::LStrOwned;
 pub use labview_interop::types::{string::LStrHandle, LVBool};
 use labview_interop::{errors::MgErr, memory::UPtr, sync::LVUserEvent};
@@ -45,4 +46,56 @@ pub extern "C" fn generate_event_cluster_handle_from_owned(
     let result = lv_user_event.post(&mut eventdata);
 
     result.into()
+}
+
+
+labview_layout! {
+    pub struct WrappedClusterWithString<'a> {
+        pub string: LStrHandle<'a>,
+    }
+}
+
+/// Copy the data from Rust to a LabVIEW cluster.
+#[cfg(target_pointer_width = "64")]
+#[no_mangle]
+pub extern "C" fn copy_cluster_data(
+    output_cluster: *mut WrappedClusterWithString,
+) -> MgErr {
+    let string = LStrOwned::from_data(b"Hello World!").unwrap();
+    let result = unsafe {
+        let inner_string = &mut (*output_cluster).string;
+        string.clone_into_pointer(inner_string as *mut LStrHandle)
+    };
+    result.into()
+}
+
+/// Clone a handle and change with no change to the original.
+///
+/// We should be able to change one without the other changing.
+#[no_mangle]
+pub extern "C" fn handle_to_owned(
+    input: LStrHandle,
+    output: *mut LStrHandle,
+) -> MgErr {
+    let result = unsafe {
+        let mut owned_input = input.try_to_owned().unwrap();
+        owned_input.set_str("Changed!").unwrap();
+        owned_input.clone_into_pointer(output)
+    };
+    result.into()
+}
+
+/// Cloning a handle should not change the original.
+#[no_mangle]
+pub extern "C" fn clone_handle(
+    out1: *mut LStrHandle,
+    out2: *mut LStrHandle,
+) {
+    let original = LStrOwned::from_data(b"Original").unwrap();
+    let mut changed = original.clone();
+    changed.set_str("Changed").unwrap();
+    unsafe {
+        original.clone_into_pointer(out1).unwrap();
+        changed.clone_into_pointer(out2).unwrap();
+    };
 }

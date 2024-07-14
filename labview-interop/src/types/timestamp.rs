@@ -23,7 +23,14 @@ pub enum LVTimeError {
 pub struct LVTime(u128);
 
 ///The Unix Epoch in LabVIEW epoch seconds for shifting timestamps between them.
-pub const UNIX_EPOCH_IN_LV_SECONDS: f64 = 2082844800.0;
+///
+/// This is the [`i64`] value. See also [`UNIX_EPOCH_IN_LV_SECONDS_F64`].
+pub const UNIX_EPOCH_IN_LV_SECONDS_I64: i64 = 2082844800;
+
+///The Unix Epoch in LabVIEW epoch seconds for shifting timestamps between them.
+///
+/// This is the [`f64`] value. See also [`UNIX_EPOCH_IN_LV_SECONDS_I64`].
+pub const UNIX_EPOCH_IN_LV_SECONDS_F64: f64 = UNIX_EPOCH_IN_LV_SECONDS_I64 as f64;
 
 impl LVTime {
     /// Extract the sub-second component as a floating point number.
@@ -54,12 +61,12 @@ impl LVTime {
     /// To a double precision number which is the seconds since unix epoch.
     pub fn to_unix_epoch(&self) -> f64 {
         let lv_epoch = self.to_lv_epoch();
-        lv_epoch - UNIX_EPOCH_IN_LV_SECONDS
+        lv_epoch - UNIX_EPOCH_IN_LV_SECONDS_F64
     }
 
     /// To a double precision number which is the seconds since unix epoch.
     pub fn from_unix_epoch(seconds: f64) -> Self {
-        let lv_epoch = seconds + UNIX_EPOCH_IN_LV_SECONDS;
+        let lv_epoch = seconds + UNIX_EPOCH_IN_LV_SECONDS_F64;
         Self::from_lv_epoch(lv_epoch)
     }
 
@@ -112,25 +119,29 @@ impl LVTime {
 mod chrono {
 
     use super::*;
-    use ::chrono::{DateTime, NaiveDateTime, Utc};
+    use ::chrono::{DateTime, Utc};
 
+    /// Get the chrono time from the LabVIEW time as a UTC value.
+    ///
+    /// From here you can convert to a specific timezone or naive values.
     impl TryFrom<LVTime> for DateTime<Utc> {
         type Error = LVTimeError;
 
         fn try_from(value: LVTime) -> Result<Self, Self::Error> {
-            let naive_time: NaiveDateTime = value.try_into()?;
-            Ok(DateTime::<Utc>::from_utc(naive_time, Utc))
+            let seconds_for_time: i64 = value.seconds() - UNIX_EPOCH_IN_LV_SECONDS_I64;
+            let nanoseconds = value.sub_seconds() * 1_000_000_000f64;
+            Self::from_timestamp(seconds_for_time, nanoseconds as u32)
+                .ok_or(LVTimeError::ChronoOutOfRange)
         }
     }
 
-    impl TryFrom<LVTime> for NaiveDateTime {
-        type Error = LVTimeError;
-
-        fn try_from(value: LVTime) -> Result<Self, Self::Error> {
-            let seconds_for_time: i64 = value.seconds() as i64 - UNIX_EPOCH_IN_LV_SECONDS as i64;
-            let nanoseconds = value.sub_seconds() * 1_000_000_000f64;
-            Self::from_timestamp_opt(seconds_for_time, nanoseconds as u32)
-                .ok_or(LVTimeError::ChronoOutOfRange)
+    /// Allow conversion from a chrono time to a LabVIEW time.
+    impl From<DateTime<Utc>> for LVTime {
+        fn from(value: DateTime<Utc>) -> Self {
+            let seconds = value.timestamp();
+            let nanoseconds = value.timestamp_subsec_nanos();
+            let fractional = (nanoseconds as f64) / 1_000_000_000f64;
+            Self::from_unix_epoch(seconds as f64 + fractional)
         }
     }
 }
@@ -188,8 +199,7 @@ mod tests {
 #[cfg(feature = "chrono")]
 mod chrono_tests {
 
-    use super::{LVTime, UNIX_EPOCH_IN_LV_SECONDS};
-    use chrono::NaiveDateTime;
+    use super::{LVTime, UNIX_EPOCH_IN_LV_SECONDS_I64};
     use chrono::{DateTime, Utc};
 
     #[test]
@@ -197,16 +207,19 @@ mod chrono_tests {
         let date_time: DateTime<Utc> = LVTime::from_lv_epoch(3758974472.02440977f64)
             .try_into()
             .unwrap();
-        let naive: NaiveDateTime = LVTime::from_lv_epoch(3758974472.02440977f64)
-            .try_into()
-            .unwrap();
-        let expected_naive = NaiveDateTime::from_timestamp_opt(
-            3758974472 - UNIX_EPOCH_IN_LV_SECONDS as i64,
+        let expected = DateTime::from_timestamp(
+            3758974472 - UNIX_EPOCH_IN_LV_SECONDS_I64,
             024409770,
         )
         .unwrap();
-        let expected = DateTime::<Utc>::from_utc(expected_naive, Utc);
         assert_eq!(date_time, expected);
-        assert_eq!(naive, expected_naive)
+    }
+
+    #[test]
+    fn lv_time_from_datetime() {
+        let lv_time = LVTime::from_lv_epoch(3758974472.02440977f64);
+        let date_time: DateTime<Utc> = lv_time.try_into().unwrap();
+        let lv_time_round_trip = date_time.into();
+        assert_eq!(lv_time, lv_time_round_trip);
     }
 }
