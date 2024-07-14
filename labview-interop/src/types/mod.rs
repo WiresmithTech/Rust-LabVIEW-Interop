@@ -13,7 +13,7 @@ use std::ffi::c_void;
 use crate::memory::UHandle;
 
 //surface some of the common types.
-pub use array::{LVArray, LVArrayHandle};
+pub use array::{LVArray, LVArrayHandle, LVArrayOwned};
 pub use boolean::LVBool;
 #[cfg(target_pointer_width = "64")]
 pub use lv_errors::{ErrorClusterPtr, ToLvError};
