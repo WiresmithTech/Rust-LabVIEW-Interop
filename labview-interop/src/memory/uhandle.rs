@@ -2,7 +2,7 @@
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
-use super::LvCopy;
+use super::LVCopy;
 use crate::errors::LVInteropError;
 
 /// A handle from LabVIEW for the data.
@@ -143,7 +143,7 @@ impl<'a, T: ?Sized> UHandle<'a, T> {
 }
 
 #[cfg(feature = "link")]
-impl<'a, T: ?Sized + LvCopy + 'static> UHandle<'a, T> {
+impl<'a, T: ?Sized + LVCopy + 'static> UHandle<'a, T> {
     /// Copy the contents of one handle into another.
     ///
     /// If other points to a null value then this will allocate a handle for the contents.
@@ -160,7 +160,7 @@ impl<'a, T: ?Sized + LvCopy + 'static> UHandle<'a, T> {
     /// ## Allowed Types
     /// ```no_run
     /// use labview_interop::labview_layout;
-    /// use labview_interop::memory::{UHandle, LvOwned};
+    /// use labview_interop::memory::{UHandle, OwnedUHandle};
     /// use labview_interop::types::LStrHandle;
     ///
     /// labview_layout! {
@@ -173,7 +173,7 @@ impl<'a, T: ?Sized + LvCopy + 'static> UHandle<'a, T> {
     ///
     /// fn copy_handles(input: UHandle<ClusterWithNumbers>) {
     ///   let cluster = ClusterWithNumbers { float: 3.14, int: 42 };
-    ///   let mut new_owned = LvOwned::new(&cluster).unwrap();
+    ///   let mut new_owned = OwnedUHandle::new(&cluster).unwrap();
     ///   unsafe {
     ///     let mut target_handle = new_owned.handle_to_inner();
     ///     input.clone_into_pointer(&mut target_handle).unwrap();

@@ -8,7 +8,7 @@ mod ndarray;
 
 use crate::errors::LVInteropError;
 use crate::labview_layout;
-use crate::memory::{LvCopy, UHandle};
+use crate::memory::{LVCopy, UHandle};
 
 #[repr(transparent)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -79,7 +79,7 @@ labview_layout!(
     }
 );
 
-impl<const D: usize, T> LvCopy for LVArray<D, T> {}
+impl<const D: usize, T> LVCopy for LVArray<D, T> {}
 
 ///implement a basic, unsafe API that works for packed usage on 32 bit targets.
 ///

@@ -6,8 +6,8 @@
 use crate::errors::Result;
 use crate::labview_layout;
 #[cfg(feature = "link")]
-use crate::memory::LvOwned;
-use crate::memory::{LvCopy, UHandle, UPtr};
+use crate::memory::OwnedUHandle;
+use crate::memory::{LVCopy, UHandle, UPtr};
 use encoding_rs::Encoding;
 use std::borrow::Cow;
 
@@ -53,7 +53,7 @@ labview_layout!(
 );
 
 /// Copyable inside a handle.
-impl LvCopy for LStr {}
+impl LVCopy for LStr {}
 
 /// Definition of a handle to an LabVIEW String. Helper for FFI definition and
 /// required for any functions that need to resize the string.
@@ -62,7 +62,7 @@ pub type LStrHandle<'a> = UHandle<'a, LStr>;
 pub type LStrPtr = UPtr<LStr>;
 /// Definition of an owned LStr Handle.
 #[cfg(feature = "link")]
-pub type LStrOwned = LvOwned<LStr>;
+pub type LStrOwned = OwnedUHandle<LStr>;
 
 impl LStr {
     /// Access the data from the string as a binary slice.
@@ -217,7 +217,7 @@ impl<'a> LStrHandle<'a> {
 impl LStrOwned {
     /// Create a new owned `LStr` with a size of zero.
     pub fn empty_string() -> Result<Self> {
-        unsafe { LvOwned::<LStr>::new_unsized(|handle| handle.set(&[])) }
+        unsafe { OwnedUHandle::<LStr>::new_unsized(|handle| handle.set(&[])) }
     }
     ///
     /// # Example
@@ -233,6 +233,6 @@ impl LStrOwned {
     /// }
     /// ```
     pub fn from_data(data: &[u8]) -> Result<Self> {
-        unsafe { LvOwned::<LStr>::new_unsized(|handle| handle.set(data)) }
+        unsafe { OwnedUHandle::<LStr>::new_unsized(|handle| handle.set(data)) }
     }
 }
