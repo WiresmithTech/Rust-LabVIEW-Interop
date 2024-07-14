@@ -1,0 +1,32 @@
+<testsuite name="TestSuite">
+<testcase classname="Data Structure Tests" name="test Array from Owned Array" time="0.0030002593994141"/>
+<testcase classname="Data Structure Tests" name="test Copy From NDArray" time="0.0030670166015625"/>
+<testcase classname="Data Structure Tests" name="test Extract from ND Array" time="0.0030875205993652"/>
+<testcase classname="Data Structure Tests" name="test Empty Array" time="0.002936840057373"/>
+<testcase classname="Data Structure Tests" name="test Resize Array" time="0.0029911994934082"/>
+<testcase classname="Data Structure Tests" name="test Error Clusters" time="0.0020761489868164"/>
+<testcase classname="Data Structure Tests" name="test Cluster with Variant" time="0.0029420852661133"/>
+<testcase classname="Data Structure Tests" name="test Cluster Handles" time="0.0020656585693359"/>
+<testcase classname="Data Structure Tests" name="test Array Handle" time="0.0030016899108887"/>
+<testcase classname="Data Structure Tests" name="test Cluster and Waveform Packing" time="0.003110408782959">
+  <failure message="Test Failure" type="testFailure">TEST_FAILURE: 0 != -1</failure>
+</testcase>
+<testcase classname="Memory Manager Tests" name="test Clone Owned Handle" time="0.0029988288879395"/>
+<testcase classname="Memory Manager Tests" name="test Handle To Owned" time="0.0026359558105469"/>
+<testcase classname="Memory Manager Tests" name="test Copy Handle Data" time="0.002957820892334"/>
+<testcase classname="Memory Manager Tests" name="test Inner Handle Method" time="0.0020575523376465"/>
+<testcase classname="Memory Manager Tests" name="test Handle Is Valid Check" time="0.0019240379333496"/>
+<testcase classname="String Tests" name="test No Provided Handle For String" time="0.0040316581726074"/>
+<testcase classname="String Tests" name="test Read And Word Count" time="0.002995491027832"/>
+<testcase classname="String Tests" name="test Writing To String Handle - Longer Existing Content" time="0.0030074119567871"/>
+<testcase classname="String Tests" name="test Writing To Empty String Handle" time="0.0030093193054199"/>
+<testcase classname="String Tests" name="test Writing To String Handle" time="0.0029830932617187"/>
+<testcase classname="Sync Tests" name="test User Event Cluster with Owned Data" time="0.0029997825622559"/>
+<testcase classname="Sync Tests" name="test Occurance Fired" time="0.0030255317687988"/>
+<testcase classname="Sync Tests" name="test User Event Fired" time="0.0030789375305176"/>
+<testcase classname="Timestamp Tests" name="test negative timestamp to epoch" time="0.0030007362365723"/>
+<testcase classname="Timestamp Tests" name="test timestamp from le bytes" time="0.0030145645141602"/>
+<testcase classname="Timestamp Tests" name="test timestamp from be bytes" time="0.0030007362365723"/>
+<testcase classname="Timestamp Tests" name="test epoch to timestamp" time="0.0030016899108887"/>
+<testcase classname="Timestamp Tests" name="test timestamp to epoch" time="0.0039911270141602"/>
+</testsuite>
