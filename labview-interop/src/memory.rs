@@ -2,6 +2,7 @@
 //! functions and types.
 //!
 //! todo: get to reference without panics.
+use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
@@ -18,6 +19,9 @@ pub trait LvCopy {}
 impl<T: Copy> LvCopy for T {}
 
 /// A pointer from LabVIEW for the data.
+///
+/// In general, these should be avoided in favor of `UHandle` which allows
+/// for more functionality such as resizing types.
 #[repr(transparent)]
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct UPtr<T: ?Sized>(*mut T);
@@ -81,7 +85,7 @@ impl<T: ?Sized> DerefMut for UPtr<T> {
 /// A handle is a double pointer so the underlying
 /// data can be resized and moved.
 #[repr(transparent)]
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq)]
 pub struct UHandle<'a, T: ?Sized + 'a>(pub *mut *mut T, pub PhantomData<&'a T>);
 
 impl<'a, T: ?Sized> UHandle<'a, T> {
@@ -179,6 +183,20 @@ impl<'a, T: ?Sized> DerefMut for UHandle<'a, T> {
     /// This will panic if the handle or internal pointer is null.
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { self.as_ref_mut().unwrap() }
+    }
+}
+
+/// Extracted formatting logic which can be used for handles or owned values.
+fn fmt_handle<T: Debug>(label: &str, handle: &UHandle<T>, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match unsafe { handle.as_ref() } {
+        Ok(inner) => write!(f, "{label}({inner:?})"),
+        Err(_) => write!(f, "{label}(Invalid)"),
+    }
+}
+
+impl<'a, T: Debug> Debug for UHandle<'a, T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fmt_handle("UHandle", self, f)
     }
 }
 
@@ -288,6 +306,7 @@ unsafe impl<'a, T: ?Sized> Sync for UHandle<'a, T> {}
 
 #[cfg(feature = "link")]
 mod lv_owned {
+    use std::fmt::Debug;
     use std::marker::PhantomData;
     use std::ops::{Deref, DerefMut};
 
@@ -328,6 +347,7 @@ mod lv_owned {
                 Err(LVInteropError::HandleCreationFailed)
             } else {
                 // Copy the value into the handle.
+                // # Safety - these pointers have just been created by the memory manager and we checked null.
                 unsafe { **handle = *value; }
                 Ok(Self(UHandle(handle, PhantomData)))
             }
@@ -453,6 +473,12 @@ mod lv_owned {
         }
     }
 
+    impl<T: Debug> Debug for LvOwned<T> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            super::fmt_handle("LvOwned", &self.0, f)
+        }
+    }
+
     impl<'a, T: LvCopy + 'static> UHandle<'a, T> {
         /// Try to create an owned handle from the current handle.
         ///
@@ -478,6 +504,20 @@ mod lv_owned {
     /// * LvOwned memory is access through UHandle which is managed by the Labview Memory Manager, which is thread safe
     unsafe impl<T: ?Sized> Send for LvOwned<T> {}
     unsafe impl<T: ?Sized> Sync for LvOwned<T> {}
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_lvowned_debug() {
+            let mut value = 42;
+            let mut value_ptr = std::ptr::addr_of_mut!(value);
+            let handle = UHandle(std::ptr::addr_of_mut!(value_ptr), std::marker::PhantomData);
+            let owned = LvOwned(handle);
+            assert_eq!(format!("{:?}", owned), "LvOwned(42)");
+        }
+    }
 }
 
 #[cfg(feature = "link")]
@@ -488,4 +528,24 @@ pub use lv_owned::LvOwned;
 #[repr(transparent)]
 #[doc(hidden)]
 pub struct MagicCookie(u32);
+
+#[cfg(test)]
+mod tests {
+    use crate::memory::{LvOwned, UHandle};
+
+    #[test]
+    fn test_handle_debug() {
+        let mut value = 42;
+        let mut value_ptr = std::ptr::addr_of_mut!(value);
+        let handle = UHandle(std::ptr::addr_of_mut!(value_ptr), std::marker::PhantomData);
+        assert_eq!(format!("{:?}", handle), "UHandle(42)");
+    }
+
+    #[test]
+    fn test_invalid_handle_debug() {
+        let handle = UHandle(std::ptr::null_mut::<*mut i32>(), std::marker::PhantomData);
+        assert_eq!(format!("{:?}", handle), "UHandle(Invalid)");
+    }
+
+}
 
