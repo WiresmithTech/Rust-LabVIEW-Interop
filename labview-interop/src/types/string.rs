@@ -236,3 +236,67 @@ impl LStrOwned {
         unsafe { OwnedUHandle::<LStr>::new_unsized(|handle| handle.set(data)) }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::alloc::{alloc, Layout, LayoutError};
+    use super::*;
+
+    /// Implements a questionable allocation strategy based on
+    /// https://www.reddit.com/r/rust/comments/mq3kqe/is_this_the_best_way_to_do_custom_dsts_unsized/
+    ///
+    /// For test purposes this is useful though.
+    ///
+    /// # Safety
+    /// These can be used for read-only testing. Writing will want to resize which is unavailable here.
+    impl LStr {
+        pub(crate) fn layout_of(n: usize) -> std::result::Result<Layout, LayoutError> {
+            // Build a layout describing an instance of this DST.
+            let (layout, _) = Layout::new::<i32>().extend(Layout::array::<u8>(n)?)?;
+            let layout = layout.pad_to_align();
+            Ok(layout)
+        }
+
+        pub(crate) unsafe fn boxed_uninit(n: usize) -> Box<Self> {
+            // Find the layout with a helper function.
+            let layout = Self::layout_of(n).unwrap();
+            // Make a heap allocation.
+            let ptr = alloc(layout);
+            // Construct a fat pointer by making a fake slice.
+            // The first argument is the pointer, the second argument is the metadata.
+            // In this case, its just the length of the slice.
+            let ptr = core::slice::from_raw_parts(ptr, n);
+            // Transmute the slice into the real fat pointer type.
+            let ptr = std::mem::transmute::<_, *mut LStr>(ptr);
+            // Build a box from the raw pointer.
+            let b = Box::from_raw(ptr);
+            // Make sure its the correct size.
+            debug_assert_eq!(std::mem::size_of_val(&*ptr), layout.size());
+            b
+        }
+
+        pub fn boxed_from_str(value: &str) -> Box<LStr> {
+            let length = value.len();
+            let bytes = value.as_bytes();
+            let mut boxed = unsafe { Self::boxed_uninit(length) };
+            boxed.size = length as i32;
+            for (i, byte) in bytes.iter().enumerate() {
+                boxed.data[i] = *byte;
+            }
+            boxed
+        }
+    }
+
+    #[test]
+    fn test_lstr_handle_debug() {
+        let string = LStr::boxed_from_str("Hello World");
+            let mut pointer = Box::into_raw(string);
+            let raw_handle = std::ptr::addr_of_mut!(pointer);
+            let handle = LStrHandle::from_raw(raw_handle);
+            let debug = format!("{:?}", handle);
+            assert!(debug.contains("Hello World"));
+
+    }
+
+
+}

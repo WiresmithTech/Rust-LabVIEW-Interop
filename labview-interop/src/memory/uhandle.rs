@@ -101,6 +101,12 @@ impl<'a, T: ?Sized> UHandle<'a, T> {
             return true;
         }
     }
+
+    /// Add a from raw method for testing only.
+    #[cfg(test)]
+    pub fn from_raw(ptr: *mut *mut T) -> Self {
+        Self(ptr, PhantomData)
+    }
 }
 
 impl<'a, T: ?Sized> Deref for UHandle<'a, T> {
@@ -123,7 +129,7 @@ impl<'a, T: ?Sized> DerefMut for UHandle<'a, T> {
     }
 }
 
-impl<'a, T: Debug> Debug for UHandle<'a, T> {
+impl<'a, T: Debug + ?Sized> Debug for UHandle<'a, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         super::fmt_handle("UHandle", self, f)
     }
