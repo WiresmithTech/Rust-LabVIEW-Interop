@@ -189,7 +189,7 @@ impl<T: ?Sized> Drop for OwnedUHandle<T> {
     }
 }
 
-impl<T: Debug> Debug for OwnedUHandle<T> {
+impl<T: Debug + ?Sized> Debug for OwnedUHandle<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         super::fmt_handle("LvOwned", &self.0, f)
     }

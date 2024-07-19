@@ -31,7 +31,7 @@ pub use uhandle::UHandle;
 pub use owned_handle::OwnedUHandle;
 
 /// Extracted formatting logic which can be used for handles or owned values.
-fn fmt_handle<T: Debug>(label: &str, handle: &UHandle<T>, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+fn fmt_handle<T: Debug + ?Sized>(label: &str, handle: &UHandle<T>, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match unsafe { handle.as_ref() } {
         Ok(inner) => write!(f, "{label}({inner:?})"),
         Err(_) => write!(f, "{label}(Invalid)"),
