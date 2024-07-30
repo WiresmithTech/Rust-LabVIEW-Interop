@@ -44,6 +44,8 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 // Macro to define the MgError and MgErrorCode and the From conversions
 macro_rules! define_errors {
     ($(($name:ident, $code:expr, $msg:expr)),*) => {
+        /// MgErrorCode is an enum of all error codes listed
+        /// in https://www.ni.com/docs/en-US/bundle/labview/page/labview-manager-function-errors.html
         #[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
         #[repr(i32)]
         pub enum MgErrorCode {
@@ -52,6 +54,7 @@ macro_rules! define_errors {
             )*
         }
 
+        /// MgError implements Error on top of the MgErrorCode
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
         pub enum MgError {
             $(
@@ -190,6 +193,71 @@ define_errors!(
     (MgBtInvalidGUIDStrErr, 121, "Invalid GUID string."),
     (RVersInFuture, 122, "The resource you are attempting to open was created in a more recent version of LabVIEW and is incompatible with this version.")
 );
+
+// this is intended to replace the MgErr
+// for less confusing naming.
+#[derive(Debug, Eq, PartialEq)]
+pub struct MgStatus(i32);
+
+impl MgStatus {
+    fn to_interop_result(self) -> std::result::Result<(), LVInteropError> {
+        if self == MgStatus(0) {
+            Ok(())
+        } else {
+            let code = MgErrorCode::try_from_primitive(self.0).expect("We implement all possible memory manager error codes, this conversion should therefore succeed.");
+            Err(code.into())
+        }
+    }
+}
+
+/*
+// at the cost of using nightly rust,
+// this implementation would allow to use the try operator
+// directly on the c calls.
+//
+// ```rust
+// extern "C" fn mycfun(blar: &str) -> MgStatus {
+//    return 1;
+// }
+//
+// fn test<T>(a: T) -> Result<T, LVInteropError> {
+//     mycfun("dudu")?
+// }
+//
+
+use std::ops;
+impl ops::Try for MgStatus {
+    type Output: ();
+    type Residual: MgError;
+
+    fn from_output(_: Self::Output) -> Self {
+        MgStatus(0)
+    }
+    fn branch(self) -> ControlFlow<Self::Residual, Self::Output> {
+        if self.0 == 0 {
+            ControlFlow::Continue(());
+        } else {
+            ControlFlow::Break(self.0.into());
+        }
+    }
+
+}
+impl ops::FromResidual<MgError> for MgStatus {
+    fn from_residual(residual: MgError) -> Self {
+        MgStatus(residual.into())
+    }
+}
+
+impl From<MgStatus> for Result<(), MgError> {
+    fn from(status: MgStatus) -> Self {
+        if status.0 == 0 {
+            Ok(())
+        } else {
+            Err(status.0.into())
+        }
+    }
+}
+*/
 
 /// MgErr is a simple wrapper around the error code that
 /// is returned by the memory manager functions.
