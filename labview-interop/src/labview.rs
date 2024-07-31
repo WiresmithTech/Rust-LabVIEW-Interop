@@ -8,7 +8,7 @@ use ctor::ctor;
 use dlopen2::wrapper::{Container, WrapperApi};
 
 use crate::{
-    errors::{LVInteropError, MgErr, Result},
+    errors::{LVInteropError, LVStatusCode, MgErr, Result},
     memory::MagicCookie,
 };
 
@@ -155,6 +155,20 @@ pub struct MemoryApi {
     ///   Returns `MgErr`: `noErr`, `mZoneErr`, `mFullErr` (corresponds to gen. err. code 2))
     #[dlopen2_name = "DSSetHandleSize"]
     set_handle_size: unsafe extern "C" fn(handle: UHandleValue, size: usize) -> MgErr,
+
+    /// Converts a numeric error code to the associated text description. This function recognizes error codes from any installed National Instruments product.
+    ///
+    /// ```C
+    /// LVBoolean NIGetOneErrorCode(int32 errCode, LStrHandle *errText);
+    /// ```
+    ///
+    /// - `errCode`: `int32`, Numeric error code
+    /// - `*errText`: `LStrHandle*`, Output: Address at which `NIGetOneErrorCode` stores the error code description. This parameter is a pointer.
+    ///
+    /// Returns `LVBoolean`: false -> This function did not find the value of errCode in any of the error text files.
+    ///                      true -> This function found the value of errCode in one of the error text files.
+    error_code_description:
+        unsafe extern "C" fn(error_code: i32, error_text: *mut UHandleValue) -> bool,
 
     /// Resizes a data handle that refers to a numeric array. This routine also accounts for alignment issues. It does not set the array dimension field. If *dataHP is NULL, LabVIEW allocates a new array handle in *dataHP.
     ///

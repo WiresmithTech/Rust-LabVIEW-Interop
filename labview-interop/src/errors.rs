@@ -43,7 +43,7 @@
 //!
 //! # Error Implementation
 
-use std::{error::Error, fmt::Display};
+use std::{borrow::Cow, error::Error, fmt::Display};
 use thiserror::Error;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
@@ -52,13 +52,66 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 /// is named status and not error on purpose. There is no checks or guarantees if the code is a valid range or has an official labview
 /// definition.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub(crate) struct LVStatusCode(i32);
+pub struct LVStatusCode(i32);
+
+impl LVStatusCode {
+    pub const SUCCESS: LVStatusCode = LVStatusCode(0);
+}
 
 impl From<i32> for LVStatusCode {
     fn from(value: i32) -> LVStatusCode {
         LVStatusCode(value)
     }
 }
+
+impl Display for LVStatusCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+/// LVError is a generic Labview Error
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Error)]
+pub struct LVError {
+    code: LVStatusCode,
+}
+
+impl LVError {
+    #[cfg(feature = "link")]
+    pub fn description(&self) -> Cow<'static, str> {
+        use crate::types::LStrHandle;
+        use std::mem::MaybeUninit;
+
+        use crate::labview;
+
+        static DEFAULT_STRING: &str = "LabVIEW-Interop: Description not retrievable";
+        let mut error_text_ptr = MaybeUninit::<LStrHandle>::uninit();
+
+        let memory_api = match labview::memory_api() {
+            Ok(api) => api,
+            Err(_) => return Cow::Borrowed(DEFAULT_STRING),
+        };
+
+        unsafe {
+            if memory_api
+                .error_code_description(self.code.0, error_text_ptr.as_mut_ptr() as *mut usize)
+            {
+                let error_text_ptr = error_text_ptr.assume_init();
+                let desc = error_text_ptr.to_rust_string().to_string();
+                return Cow::Owned(desc);
+            }
+        }
+        Cow::Borrowed(DEFAULT_STRING)
+    }
+}
+
+impl Display for LVError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}: {}", self.code, self.description())
+    }
+}
+
+//pub type MgErr = LVStatusCode;
 
 /// The `MgError` / `MgErrorCode` implement From in both directions. Additionally IntoPrimitive and TryFromPrimitive is derived
 /// to enable the conversion from and to int primitives.
@@ -119,16 +172,31 @@ macro_rules! define_errors {
 impl TryFrom<LVStatusCode> for MgErrorCode {
     type Error = LVInteropError;
     fn try_from(status: LVStatusCode) -> ::core::result::Result<Self, Self::Error> {
+        // SUCCESS is not a valid error!
+        if status == LVStatusCode::SUCCESS {
+            return Err(LVInteropError::InvalidMgErrorCode);
+        }
         match MgErrorCode::try_from_primitive(status.0) {
             Ok(code) => Ok(code),
-            Err(err) => Err(LVInteropError::InvalidStatusCode),
+            Err(_) => Err(LVInteropError::InvalidMgErrorCode),
         }
     }
 }
 
+// impl MgStatus {
+//     fn to_interop_result(self) -> std::result::Result<(), LVInteropError> {
+//         if self == MgStatus(0) {
+//             Ok(())
+//         } else {
+//             let code = MgErrorCode::try_from_primitive(self.0).expect("We implement all possible memory manager error codes, this conversion should therefore succeed.");
+//             Err(code.into())
+//         }
+//     }
+// }
+
 define_errors!(
     (MgArgErr, 1, "An input parameter is invalid."),
-    (MFullErr, 2, "Memory if full."),
+    (MFullErr, 2, "Memory is full."),
     (FEof, 4, "End of file encountered."),
     (FIsOpen, 5, "File already open"),
     (FIoErr, 6, "Generic file I/O error."),
@@ -235,16 +303,29 @@ define_errors!(
     (RVersInFuture, 122, "The resource you are attempting to open was created in a more recent version of LabVIEW and is incompatible with this version.")
 );
 
-impl MgStatus {
-    fn to_interop_result(self) -> std::result::Result<(), LVInteropError> {
-        if self == MgStatus(0) {
-            Ok(())
-        } else {
-            let code = MgErrorCode::try_from_primitive(self.0).expect("We implement all possible memory manager error codes, this conversion should therefore succeed.");
-            Err(code.into())
-        }
-    }
-}
+/// # Examples
+///
+/// ```
+/// use labview_interop::error::{LVStatusCode, MgErrorCode, MgError, LVInteropError};
+/// use std::convert::TryFrom;
+///
+/// let status = LVStatusCode::from(1);
+/// let result: Result<MgErrorCode, LVInteropError> = MgErrorCode::try_from(status);
+/// assert!(result.is_ok());
+/// assert_eq!(result.unwrap(), MgErrorCode::OutOfMemory);
+///
+/// let status = LVStatusCode::from(0);
+/// let result: Result<MgErrorCode, LVInteropError> = MgErrorCode::try_from(status);
+/// assert!(result.is_err());
+///
+/// let error_code = MgErrorCode::InvalidHandle;
+/// let error: MgError = error_code.into();
+/// assert_eq!(error, MgError::InvalidHandle);
+///
+/// let error = MgError::MFullErr;
+/// let error_code: MgErrorCode = error.into();
+/// assert_eq!(error_code, MgErrorCode::OutOfMemory);
+/// ```
 
 /*
 // at the cost of using nightly rust,
@@ -343,7 +424,7 @@ impl Error for MgErr {
 #[derive(Error, Debug)]
 pub enum LVInteropError {
     #[error("Invalid numeric status code for conversion into enumerated error code")]
-    InvalidStatusCode,
+    InvalidMgErrorCode,
     #[error("Internal LabVIEW Error: {0}")]
     LabviewError(#[from] MgErr),
     #[error("Invalid handle when valid handle is required")]
@@ -365,6 +446,7 @@ pub type Result<T> = std::result::Result<T, LVInteropError>;
 impl From<LVInteropError> for MgErr {
     fn from(value: LVInteropError) -> Self {
         match value {
+            LVInteropError::InvalidMgErrorCode => MgErr(-1),
             LVInteropError::LabviewError(err) => err,
             LVInteropError::InvalidHandle => MgErr::INTEROP_ERROR,
             LVInteropError::NoLabviewApi => MgErr(-2),
@@ -381,5 +463,82 @@ impl<T> From<Result<T>> for MgErr {
             Ok(_) => MgErr::NO_ERROR,
             Err(err) => err.into(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lvstatuscode_from_i32() {
+        let status = LVStatusCode::from(0);
+        assert_eq!(status, LVStatusCode::SUCCESS);
+
+        let status = LVStatusCode::from(1);
+        assert_eq!(status, LVStatusCode(1));
+    }
+
+    #[test]
+    fn test_mgerrorcode_to_mgerror() {
+        define_errors!(
+            (OutOfMemory, 1, "Memory is full"),
+            (InvalidHandle, 2, "Invalid handle")
+        );
+
+        let error_code = MgErrorCode::OutOfMemory;
+        let error: MgError = error_code.into();
+        assert_eq!(error, MgError::OutOfMemory);
+
+        let error_code = MgErrorCode::InvalidHandle;
+        let error: MgError = error_code.into();
+        assert_eq!(error, MgError::InvalidHandle);
+    }
+
+    #[test]
+    fn test_mgerror_to_mgerrorcode() {
+        define_errors!(
+            (OutOfMemory, 1, "Memory is full"),
+            (InvalidHandle, 2, "Invalid handle")
+        );
+
+        let error = MgError::OutOfMemory;
+        let error_code: MgErrorCode = error.into();
+        assert_eq!(error_code, MgErrorCode::OutOfMemory);
+
+        let error = MgError::InvalidHandle;
+        let error_code: MgErrorCode = error.into();
+        assert_eq!(error_code, MgErrorCode::InvalidHandle);
+    }
+
+    #[test]
+    fn test_lvstatuscode_to_mgerrorcode() {
+        define_errors!(
+            (OutOfMemory, 1, "Memory is full"),
+            (InvalidHandle, 2, "Invalid handle")
+        );
+
+        let status = LVStatusCode::from(1);
+        let result: core::result::Result<MgErrorCode, LVInteropError> =
+            MgErrorCode::try_from(status);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), MgErrorCode::OutOfMemory);
+
+        let status = LVStatusCode::from(0);
+        let result: core::result::Result<MgErrorCode, LVInteropError> =
+            MgErrorCode::try_from(status);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_lvstatuscode_to_result() {
+        let status = LVStatusCode::from(1);
+        let result: core::result::Result<(), LVInteropError> = Result::try_from(status).unwrap();
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), MgError::MFullErr);
+
+        let status = LVStatusCode::from(0);
+        let result: core::result::Result<(), MgError> = Result::try_from(status).unwrap();
+        assert!(result.is_ok());
     }
 }
