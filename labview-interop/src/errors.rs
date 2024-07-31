@@ -42,9 +42,28 @@
 //! internally and not handed down by c functions
 //!
 //! # Error Implementation
+//! There is a hierarcy of Status and Errors
+//! - A status encode Success and Error
+//!
+//! These two are very generic and not bound to our crate:
+//! LVStatusCode - a simple i32 code that can be returned from any c function, no checks
+//! LVError - a generic i32 error that can get the official description through the memory manager
+//!           this is the basis for creating a LVErrorCluster
+//!
+//! The errors we expect to receive from calls to labview functions are
+//! MgErrorCode
+//! MgError
+//!
+//! Our generic Error handling is an enum
+//! LabviewInteropError
+//! This enum has custom errors for our internal use, we can hold MgErrors, and as last resort we can also hold
+//! LVError
 
-use std::{borrow::Cow, error::Error, fmt::Display};
+use std::{borrow::Cow, error::Error, fmt::Display, mem::MaybeUninit};
 use thiserror::Error;
+
+use crate::labview;
+use crate::types::LStrHandle;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
@@ -56,11 +75,65 @@ pub struct LVStatusCode(i32);
 
 impl LVStatusCode {
     pub const SUCCESS: LVStatusCode = LVStatusCode(0);
+
+    //this will convert the LVStatusCode to either Ok(T) or Err(LVInteropError(LabviewMgError)) or Err(LVInteropError)
+    //mostly for our internal use
+    fn to_specific_result<T>(self, success_value: T) -> Result<T> {
+        if self == Self::SUCCESS {
+            Ok(success_value)
+        } else {
+            match MgErrorCode::try_from(self) {
+                Ok(mg_err) => Err(MgError::from(mg_err).into()),
+                Err(inter_err) => Err(inter_err),
+            }
+        }
+    }
+
+    // this will convert the LVStatusCode to the generic LVError with no checks of validity
+    fn to_generic_result<T>(self, success_value: T) -> core::result::Result<T, LVError> {
+        if self == Self::SUCCESS {
+            Ok(success_value)
+        } else {
+            Err(LVError { code: self })
+        }
+    }
 }
 
+/* not all LVInteropErrors have an equivalent
+impl<T> From<Result<T>> for LVStatusCode {
+    fn from(value: Result<T>) -> Self {
+        match value {
+            Ok(_) => LVStatusCode::SUCCESS,
+            Err(err) => err.into(),
+        }
+    }
+}*/
+
+impl<T> From<core::result::Result<T, LVError>> for LVStatusCode {
+    fn from(value: core::result::Result<T, LVError>) -> Self {
+        match value {
+            Ok(_) => LVStatusCode::SUCCESS,
+            Err(err) => err.into(),
+        }
+    }
+}
+
+// From<i32> vice versa implemented, but not Deref (do not want to inherit other math operations)
 impl From<i32> for LVStatusCode {
     fn from(value: i32) -> LVStatusCode {
         LVStatusCode(value)
+    }
+}
+
+impl From<LVStatusCode> for i32 {
+    fn from(code: LVStatusCode) -> i32 {
+        code.0
+    }
+}
+
+impl From<LVError> for LVStatusCode {
+    fn from(err: LVError) -> LVStatusCode {
+        err.code
     }
 }
 
@@ -71,6 +144,7 @@ impl Display for LVStatusCode {
 }
 
 /// LVError is a generic Labview Error
+/// that can retrieve a error description if the link feature is enabled
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Error)]
 pub struct LVError {
     code: LVStatusCode,
@@ -79,11 +153,6 @@ pub struct LVError {
 impl LVError {
     #[cfg(feature = "link")]
     pub fn description(&self) -> Cow<'static, str> {
-        use crate::types::LStrHandle;
-        use std::mem::MaybeUninit;
-
-        use crate::labview;
-
         static DEFAULT_STRING: &str = "LabVIEW-Interop: Description not retrievable";
         let mut error_text_ptr = MaybeUninit::<LStrHandle>::uninit();
 
@@ -104,6 +173,13 @@ impl LVError {
         Cow::Borrowed(DEFAULT_STRING)
     }
 }
+
+/* no From, as there is no translation on LVStatusCode == SUCCESS
+impl From<LVStatusCode> for LVError {
+    fn from(code: LVStatusCode) -> LVError {
+        LVError { code }
+    }
+}*/
 
 impl Display for LVError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -425,6 +501,8 @@ impl Error for MgErr {
 pub enum LVInteropError {
     #[error("Invalid numeric status code for conversion into enumerated error code")]
     InvalidMgErrorCode,
+    #[error("Internal LabVIEW Manager Error: {0}")]
+    LabviewMgError(#[from] MgError),
     #[error("Internal LabVIEW Error: {0}")]
     LabviewError(#[from] MgErr),
     #[error("Invalid handle when valid handle is required")]
@@ -447,6 +525,7 @@ impl From<LVInteropError> for MgErr {
     fn from(value: LVInteropError) -> Self {
         match value {
             LVInteropError::InvalidMgErrorCode => MgErr(-1),
+            LVInteropError::LabviewMgError(err) => MgErr(-1),
             LVInteropError::LabviewError(err) => err,
             LVInteropError::InvalidHandle => MgErr::INTEROP_ERROR,
             LVInteropError::NoLabviewApi => MgErr(-2),
