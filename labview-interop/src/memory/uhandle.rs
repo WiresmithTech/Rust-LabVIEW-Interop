@@ -1,9 +1,8 @@
-
+use super::LVCopy;
+use crate::errors::LVInteropError;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
-use super::LVCopy;
-use crate::errors::LVInteropError;
 
 /// A handle from LabVIEW for the data.
 ///
@@ -94,7 +93,7 @@ impl<'a, T: ?Sized> UHandle<'a, T> {
                     .unwrap()
                     .check_handle(self.0 as usize)
             };
-            ret == crate::errors::MgErr::NO_ERROR
+            ret == crate::errors::LVStatusCode::SUCCESS
         }
         #[cfg(not(feature = "link"))]
         {
@@ -144,7 +143,7 @@ impl<'a, T: ?Sized> UHandle<'a, T> {
     /// * The handle must be valid.
     pub unsafe fn resize(&mut self, desired_size: usize) -> crate::errors::Result<()> {
         let err = crate::labview::memory_api()?.set_handle_size(self.0 as usize, desired_size);
-        err.to_result(())
+        err.to_specific_result(())
     }
 }
 
@@ -227,13 +226,16 @@ impl<'a, T: ?Sized + LVCopy + 'static> UHandle<'a, T> {
     ///   }
     /// }
     /// ```
-    pub unsafe fn clone_into_pointer(&self, other: *mut UHandle<'_, T>) -> crate::errors::Result<()> {
+    pub unsafe fn clone_into_pointer(
+        &self,
+        other: *mut UHandle<'_, T>,
+    ) -> crate::errors::Result<()> {
         // Validate this handle first to improve safety.
         if !self.valid() {
             return Err(LVInteropError::InvalidHandle);
         }
         let error = crate::labview::memory_api()?.copy_handle(other as *mut usize, self.0 as usize);
-        error.to_result(())
+        error.to_specific_result(())
     }
 }
 
@@ -242,8 +244,6 @@ impl<'a, T: ?Sized + LVCopy + 'static> UHandle<'a, T> {
 /// * UHandle memory is managed by the Labview Memory Manager, which is thread safe
 unsafe impl<'a, T: ?Sized> Send for UHandle<'a, T> {}
 unsafe impl<'a, T: ?Sized> Sync for UHandle<'a, T> {}
-
-
 
 #[cfg(test)]
 mod tests {
@@ -344,6 +344,4 @@ mod tests {
         let handle = UHandle(std::ptr::addr_of_mut!(value_ptr), PhantomData);
         assert!(handle.valid());
     }
-
 }
-

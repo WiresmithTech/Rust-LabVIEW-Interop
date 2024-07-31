@@ -64,7 +64,9 @@ impl<T: Copy + 'static> OwnedUHandle<T> {
         } else {
             // Copy the value into the handle.
             // # Safety - these pointers have just been created by the memory manager and we checked null.
-            unsafe { **handle = *value; }
+            unsafe {
+                **handle = *value;
+            }
             Ok(Self(UHandle(handle, PhantomData)))
         }
     }
@@ -181,8 +183,10 @@ impl<T: ?Sized> DerefMut for OwnedUHandle<T> {
 
 impl<T: ?Sized> Drop for OwnedUHandle<T> {
     fn drop(&mut self) {
-        let result = memory_api()
-            .map(|api| unsafe { api.dispose_handle(self.0 .0 as usize).to_result(()) });
+        let result = memory_api().map(|api| unsafe {
+            api.dispose_handle(self.0 .0 as usize)
+                .to_specific_result(())
+        });
         if let Err(e) | Ok(Err(e)) = result {
             println!("Error freeing handle from LV: {e}");
         }
@@ -212,7 +216,6 @@ impl<T: ?Sized + LVCopy + 'static> OwnedUHandle<T> {
             })
         }
     }
-
 }
 
 impl<'a, T: ?Sized + LVCopy + 'static> UHandle<'a, T> {

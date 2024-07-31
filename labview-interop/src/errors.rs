@@ -70,6 +70,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 /// ´LVStatusCode´ is a newtype on i32 to represent all potential error codes and 0 as a success value. Therefore it
 /// is named status and not error on purpose. There is no checks or guarantees if the code is a valid range or has an official labview
 /// definition.
+#[repr(transparent)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct LVStatusCode(i32);
 
@@ -78,7 +79,7 @@ impl LVStatusCode {
 
     //this will convert the LVStatusCode to either Ok(T) or Err(LVInteropError(LabviewMgError)) or Err(LVInteropError)
     //mostly for our internal use
-    fn to_specific_result<T>(self, success_value: T) -> Result<T> {
+    pub(crate) fn to_specific_result<T>(self, success_value: T) -> Result<T> {
         if self == Self::SUCCESS {
             Ok(success_value)
         } else {
@@ -90,7 +91,7 @@ impl LVStatusCode {
     }
 
     // this will convert the LVStatusCode to the generic LVError with no checks of validity
-    fn to_generic_result<T>(self, success_value: T) -> core::result::Result<T, LVError> {
+    pub fn to_generic_result<T>(self, success_value: T) -> core::result::Result<T, LVError> {
         if self == Self::SUCCESS {
             Ok(success_value)
         } else {
@@ -137,9 +138,39 @@ impl From<LVError> for LVStatusCode {
     }
 }
 
+impl From<MgError> for LVStatusCode {
+    fn from(err: MgError) -> LVStatusCode {
+        MgErrorCode::from(err).into()
+    }
+}
+
+impl From<MgErrorCode> for LVStatusCode {
+    fn from(errcode: MgErrorCode) -> LVStatusCode {
+        errcode.into()
+    }
+}
+
 impl Display for LVStatusCode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl From<LVInteropError> for LVStatusCode {
+    fn from(value: LVInteropError) -> Self {
+        match value {
+            LVInteropError::LabviewMgError(e) => e.into(),
+            _ => LVStatusCode(-1),
+        }
+    }
+}
+
+impl<T> From<Result<T>> for LVStatusCode {
+    fn from(value: Result<T>) -> Self {
+        match value {
+            Ok(_) => LVStatusCode::SUCCESS,
+            Err(err) => err.into(),
+        }
     }
 }
 
@@ -186,8 +217,6 @@ impl Display for LVError {
         write!(f, "{}: {}", self.code, self.description())
     }
 }
-
-//pub type MgErr = LVStatusCode;
 
 /// The `MgError` / `MgErrorCode` implement From in both directions. Additionally IntoPrimitive and TryFromPrimitive is derived
 /// to enable the conversion from and to int primitives.
@@ -452,6 +481,7 @@ impl From<MgStatus> for Result<(), MgError> {
 }
 */
 
+/*
 /// MgErr is a simple wrapper around the error code that
 /// is returned by the memory manager functions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -496,15 +526,15 @@ impl Error for MgErr {
         None
     }
 }
-
+*/
 #[derive(Error, Debug)]
 pub enum LVInteropError {
     #[error("Invalid numeric status code for conversion into enumerated error code")]
     InvalidMgErrorCode,
     #[error("Internal LabVIEW Manager Error: {0}")]
     LabviewMgError(#[from] MgError),
-    #[error("Internal LabVIEW Error: {0}")]
-    LabviewError(#[from] MgErr),
+    //#[error("Internal LabVIEW Error: {0}")]
+    //LabviewError(#[from] MgErr),
     #[error("Invalid handle when valid handle is required")]
     InvalidHandle,
     #[error("LabVIEW API unavailable. Probably because it isn't being run in LabVIEW")]
@@ -520,7 +550,7 @@ pub enum LVInteropError {
 }
 
 pub type Result<T> = std::result::Result<T, LVInteropError>;
-
+/*
 impl From<LVInteropError> for MgErr {
     fn from(value: LVInteropError) -> Self {
         match value {
@@ -544,7 +574,7 @@ impl<T> From<Result<T>> for MgErr {
         }
     }
 }
-
+*/
 #[cfg(test)]
 mod tests {
     use super::*;
