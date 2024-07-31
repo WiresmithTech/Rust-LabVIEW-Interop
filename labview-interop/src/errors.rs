@@ -1,34 +1,65 @@
+//! # Error handling in LabVIEW Interop
+//!
+//! There are four error paths that the labview-interop crate needs to handle:
+//!
+//! 1. **MgError and MgErrorCode**, Internal: LabView Memory Manager --> Rust
+//!    This crate calls the labview memory manager internally to deal with memory
+//!    owned by LabVIEW. The functions of the memory manager return MgErr. The documentation
+//!    on https://www.ni.com/docs/en-US/bundle/labview/page/labview-manager-function-errors.html
+//!    gives a full list of possible error values.
+//!
+//! 2. **MgErrorCode**: to LabVIEW through function return
+//!    We want to be able to return the errors genated internally through the function return and be
+//!    understood on the LabVIEW side. This is straight forward for Errors of MgError type. But we will
+//!    have an internal compound Error type that can have a different type. When using status returns, these
+//!    can only be converted to a very generic error code. Therefore 3
+//!
+//! 3. **InteropError**: to LabVIEW through ErrorCluster parameter
+//!    Our internal `LvInteropError` compound error can easily be converted to an ErrorCluster. For MgErrors the conversion is
+//!    straight forward. The correct source descriptions are gotten from the memory manager through `NIGetOneErrorCode`.
+//!    For non LV errors, a generic error is leveraged, and the source description is overwritten.
+//!
+//! 4. from LabVIEW through ErrorCluster parameter
+//!    Will labview-interop ever need to make sense of an error? It may be good enough to differentiate between an error and
+//!    warnings. TBD
+//!
+//! # Notes on Error Handling in LabVIEW
+//! This section is a sumary of defined and observed LabVIEW behaviour
+//!
+//! ## Labview error clusters and data types
+//! THe labview error clusters possess an error code of i32. The error lists on labviewwiki show
+//! official Labview errors as low as 0x8000000A and as high as 0x3FFC0105.
+//!
+//! ## the Labview Memory Manager / MgErr and types
+//! The memory manager code examples from the documentation call the return value of the c function calls ´MgErr´ of type i32
+//!
+//! ## Custom error ranges
+//! Custom defined errors can range from
+//! * -8999 through -8000
+//! * 5000 through 9999
+//! * 500,000 through 599,999
+//! For obvious reasons the labview interop crate will use the **range 542,000 to 542,999** for errors that are generated
+//! internally and not handed down by c functions
+//!
+//! # Error Implementation
+
 use std::{error::Error, fmt::Display};
 use thiserror::Error;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-/// # Error handling
-///
-/// There are four error paths that the labview-interop crate needs to handle:
-///
-/// 1. **MgError and MgErrorCode**, Internal: LabView Memory Manager --> Rust
-///    This crate calls the labview memory manager internally to deal with memory
-///    owned by LabVIEW. The functions of the memory manager return MgErr. The documentation
-///    on https://www.ni.com/docs/en-US/bundle/labview/page/labview-manager-function-errors.html
-///    gives a full list of possible error values.
-///
-/// 2. **MgErrorCode**: to LabVIEW through function return
-///    We want to be able to return the errors genated internally through the function return and be
-///    understood on the LabVIEW side. This is straight forward for Errors of MgError type. But we will
-///    have an internal compound Error type that can have a different type. When using status returns, these
-///    can only be converted to a very generic error code. Therefore 3
-///
-/// 3. **InteropError**: to LabVIEW through ErrorCluster parameter
-///    Our internal `LvInteropError` compound error can easily be converted to an ErrorCluster. For MgErrors the conversion is
-///    straight forward. The correct source descriptions are gotten from the memory manager through `NIGetOneErrorCode`.
-///    For non LV errors, a generic error is leveraged, and the source description is overwritten.
-///
-/// 4. from LabVIEW through ErrorCluster parameter
-///    Will labview-interop ever need to make sense of an error? It may be good enough to differentiate between an error and
-///    warnings. TBD
-///
-/// # Error Implementation
+/// ´LVStatusCode´ is a newtype on i32 to represent all potential error codes and 0 as a success value. Therefore it
+/// is named status and not error on purpose. There is no checks or guarantees if the code is a valid range or has an official labview
+/// definition.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub(crate) struct LVStatusCode(i32);
+
+impl From<i32> for LVStatusCode {
+    fn from(value: i32) -> LVStatusCode {
+        LVStatusCode(value)
+    }
+}
+
 /// The `MgError` / `MgErrorCode` implement From in both directions. Additionally IntoPrimitive and TryFromPrimitive is derived
 /// to enable the conversion from and to int primitives.
 ///
@@ -44,7 +75,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 // Macro to define the MgError and MgErrorCode and the From conversions
 macro_rules! define_errors {
     ($(($name:ident, $code:expr, $msg:expr)),*) => {
-        /// MgErrorCode is an enum of all error codes listed
+        /// `MgErrorCode` is an enum of all error codes listed
         /// in https://www.ni.com/docs/en-US/bundle/labview/page/labview-manager-function-errors.html
         #[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
         #[repr(i32)]
@@ -54,7 +85,7 @@ macro_rules! define_errors {
             )*
         }
 
-        /// MgError implements Error on top of the MgErrorCode
+        /// `MgError` implements Error on top of the `MgErrorCode` and includes a description
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
         pub enum MgError {
             $(
@@ -83,6 +114,16 @@ macro_rules! define_errors {
             }
         }
     };
+}
+
+impl TryFrom<LVStatusCode> for MgErrorCode {
+    type Error = LVInteropError;
+    fn try_from(status: LVStatusCode) -> ::core::result::Result<Self, Self::Error> {
+        match MgErrorCode::try_from_primitive(status.0) {
+            Ok(code) => Ok(code),
+            Err(err) => Err(LVInteropError::InvalidStatusCode),
+        }
+    }
 }
 
 define_errors!(
@@ -194,11 +235,6 @@ define_errors!(
     (RVersInFuture, 122, "The resource you are attempting to open was created in a more recent version of LabVIEW and is incompatible with this version.")
 );
 
-// this is intended to replace the MgErr
-// for less confusing naming.
-#[derive(Debug, Eq, PartialEq)]
-pub struct MgStatus(i32);
-
 impl MgStatus {
     fn to_interop_result(self) -> std::result::Result<(), LVInteropError> {
         if self == MgStatus(0) {
@@ -306,6 +342,8 @@ impl Error for MgErr {
 
 #[derive(Error, Debug)]
 pub enum LVInteropError {
+    #[error("Invalid numeric status code for conversion into enumerated error code")]
+    InvalidStatusCode,
     #[error("Internal LabVIEW Error: {0}")]
     LabviewError(#[from] MgErr),
     #[error("Invalid handle when valid handle is required")]
