@@ -67,8 +67,10 @@ use crate::types::LStrHandle;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-/// ´LVStatusCode´ is a newtype on i32 to represent all potential error codes and 0 as a success value. Therefore it
-/// is named status and not error on purpose. There is no checks or guarantees if the code is a valid range or has an official labview
+/// ´LVStatusCode´ is a newtype on i32 to represent all potential error codes and 0 as a success value.
+///
+/// This kind of status code corresponds to the Rust Result types.
+/// Therefore it is named status and not error on purpose. There is no checks or guarantees if the code is a valid range or has an official labview
 /// definition.
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -77,8 +79,8 @@ pub struct LVStatusCode(i32);
 impl LVStatusCode {
     pub const SUCCESS: LVStatusCode = LVStatusCode(0);
 
-    //this will convert the LVStatusCode to either Ok(T) or Err(LVInteropError(LabviewMgError)) or Err(LVInteropError)
-    //mostly for our internal use
+    ///this will convert the LVStatusCode to either Ok(T) or Err(LVInteropError(LabviewMgError)) or Err(LVInteropError)
+    ///mostly for our internal use
     pub(crate) fn to_specific_result<T>(self, success_value: T) -> Result<T> {
         if self == Self::SUCCESS {
             Ok(success_value)
@@ -90,7 +92,7 @@ impl LVStatusCode {
         }
     }
 
-    // this will convert the LVStatusCode to the generic LVError with no checks of validity
+    /// this will convert the LVStatusCode to the generic LVError with no checks of validity
     pub fn to_generic_result<T>(self, success_value: T) -> core::result::Result<T, LVError> {
         if self == Self::SUCCESS {
             Ok(success_value)
@@ -100,15 +102,11 @@ impl LVStatusCode {
     }
 }
 
-/* not all LVInteropErrors have an equivalent
-impl<T> From<Result<T>> for LVStatusCode {
-    fn from(value: Result<T>) -> Self {
-        match value {
-            Ok(_) => LVStatusCode::SUCCESS,
-            Err(err) => err.into(),
-        }
+impl From<LVError> for LVStatusCode {
+    fn from(err: LVError) -> LVStatusCode {
+        err.code
     }
-}*/
+}
 
 impl<T> From<core::result::Result<T, LVError>> for LVStatusCode {
     fn from(value: core::result::Result<T, LVError>) -> Self {
@@ -132,9 +130,9 @@ impl From<LVStatusCode> for i32 {
     }
 }
 
-impl From<LVError> for LVStatusCode {
-    fn from(err: LVError) -> LVStatusCode {
-        err.code
+impl From<MgErrorCode> for LVStatusCode {
+    fn from(errcode: MgErrorCode) -> LVStatusCode {
+        errcode.into()
     }
 }
 
@@ -144,32 +142,27 @@ impl From<MgError> for LVStatusCode {
     }
 }
 
-impl From<MgErrorCode> for LVStatusCode {
-    fn from(errcode: MgErrorCode) -> LVStatusCode {
-        errcode.into()
-    }
-}
-
 impl Display for LVStatusCode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
-impl From<LVInteropError> for LVStatusCode {
-    fn from(value: LVInteropError) -> Self {
-        match value {
-            LVInteropError::LabviewMgError(e) => e.into(),
-            _ => LVStatusCode(-1),
-        }
-    }
-}
-
+/// the conversion from LVInteropError back to LVStatusCode is important
+/// to return the status in extern "C" functions back to LV
 impl<T> From<Result<T>> for LVStatusCode {
     fn from(value: Result<T>) -> Self {
         match value {
             Ok(_) => LVStatusCode::SUCCESS,
             Err(err) => err.into(),
+        }
+    }
+}
+impl From<LVInteropError> for LVStatusCode {
+    fn from(value: LVInteropError) -> Self {
+        match value {
+            LVInteropError::LabviewMgError(e) => e.into(),
+            _ => LVStatusCode(-1),
         }
     }
 }
@@ -205,12 +198,26 @@ impl LVError {
     }
 }
 
-/* no From, as there is no translation on LVStatusCode == SUCCESS
-impl From<LVStatusCode> for LVError {
-    fn from(code: LVStatusCode) -> LVError {
-        LVError { code }
+impl From<MgError> for LVError {
+    fn from(mgerr: MgError) -> LVError {
+        LVError { code: mgerr.into() }
     }
-}*/
+}
+
+impl From<MgErrorCode> for LVError {
+    fn from(errcode: MgErrorCode) -> LVError {
+        errcode.into()
+    }
+}
+
+impl From<LVStatusCode> for core::result::Result<(), LVError> {
+    fn from(code: LVStatusCode) -> Self {
+        match code {
+            LVStatusCode::SUCCESS => Ok(()),
+            _ => Err(LVError { code }),
+        }
+    }
+}
 
 impl Display for LVError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -288,16 +295,11 @@ impl TryFrom<LVStatusCode> for MgErrorCode {
     }
 }
 
-// impl MgStatus {
-//     fn to_interop_result(self) -> std::result::Result<(), LVInteropError> {
-//         if self == MgStatus(0) {
-//             Ok(())
-//         } else {
-//             let code = MgErrorCode::try_from_primitive(self.0).expect("We implement all possible memory manager error codes, this conversion should therefore succeed.");
-//             Err(code.into())
-//         }
-//     }
-// }
+impl Display for MgErrorCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
 
 define_errors!(
     (MgArgErr, 1, "An input parameter is invalid."),
@@ -432,109 +434,12 @@ define_errors!(
 /// assert_eq!(error_code, MgErrorCode::OutOfMemory);
 /// ```
 
-/*
-// at the cost of using nightly rust,
-// this implementation would allow to use the try operator
-// directly on the c calls.
-//
-// ```rust
-// extern "C" fn mycfun(blar: &str) -> MgStatus {
-//    return 1;
-// }
-//
-// fn test<T>(a: T) -> Result<T, LVInteropError> {
-//     mycfun("dudu")?
-// }
-//
-
-use std::ops;
-impl ops::Try for MgStatus {
-    type Output: ();
-    type Residual: MgError;
-
-    fn from_output(_: Self::Output) -> Self {
-        MgStatus(0)
-    }
-    fn branch(self) -> ControlFlow<Self::Residual, Self::Output> {
-        if self.0 == 0 {
-            ControlFlow::Continue(());
-        } else {
-            ControlFlow::Break(self.0.into());
-        }
-    }
-
-}
-impl ops::FromResidual<MgError> for MgStatus {
-    fn from_residual(residual: MgError) -> Self {
-        MgStatus(residual.into())
-    }
-}
-
-impl From<MgStatus> for Result<(), MgError> {
-    fn from(status: MgStatus) -> Self {
-        if status.0 == 0 {
-            Ok(())
-        } else {
-            Err(status.0.into())
-        }
-    }
-}
-*/
-
-/*
-/// MgErr is a simple wrapper around the error code that
-/// is returned by the memory manager functions.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(transparent)]
-pub struct MgErr(i32);
-
-impl From<i32> for MgErr {
-    fn from(value: i32) -> MgErr {
-        MgErr(value)
-    }
-}
-
-impl MgErr {
-    pub const NO_ERROR: MgErr = MgErr(0);
-    pub const INTEROP_ERROR: MgErr = MgErr(-1);
-    pub const MEMORY_FULL: MgErr = MgErr(2);
-    pub fn to_result<T>(self, success_value: T) -> Result<T> {
-        if self.0 != 0 {
-            Err(self.into())
-        } else {
-            Ok(success_value)
-        }
-    }
-
-    fn get_description(&self) -> &'static str {
-        match self.0 {
-            0 => "No Error",
-            2 => "Memory Full",
-            _ => "No Description for Code",
-        }
-    }
-}
-
-impl Display for MgErr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {}", self.0, self.get_description())
-    }
-}
-
-impl Error for MgErr {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
-    }
-}
-*/
 #[derive(Error, Debug)]
 pub enum LVInteropError {
     #[error("Invalid numeric status code for conversion into enumerated error code")]
     InvalidMgErrorCode,
     #[error("Internal LabVIEW Manager Error: {0}")]
     LabviewMgError(#[from] MgError),
-    //#[error("Internal LabVIEW Error: {0}")]
-    //LabviewError(#[from] MgErr),
     #[error("Invalid handle when valid handle is required")]
     InvalidHandle,
     #[error("LabVIEW API unavailable. Probably because it isn't being run in LabVIEW")]
@@ -550,31 +455,7 @@ pub enum LVInteropError {
 }
 
 pub type Result<T> = std::result::Result<T, LVInteropError>;
-/*
-impl From<LVInteropError> for MgErr {
-    fn from(value: LVInteropError) -> Self {
-        match value {
-            LVInteropError::InvalidMgErrorCode => MgErr(-1),
-            LVInteropError::LabviewMgError(err) => MgErr(-1),
-            LVInteropError::LabviewError(err) => err,
-            LVInteropError::InvalidHandle => MgErr::INTEROP_ERROR,
-            LVInteropError::NoLabviewApi => MgErr(-2),
-            LVInteropError::ArrayDimensionsOutOfRange => MgErr(-3),
-            LVInteropError::ArrayDimensionMismatch => MgErr(-3),
-            LVInteropError::HandleCreationFailed => MgErr(-4),
-        }
-    }
-}
 
-impl<T> From<Result<T>> for MgErr {
-    fn from(value: Result<T>) -> Self {
-        match value {
-            Ok(_) => MgErr::NO_ERROR,
-            Err(err) => err.into(),
-        }
-    }
-}
-*/
 #[cfg(test)]
 mod tests {
     use super::*;
