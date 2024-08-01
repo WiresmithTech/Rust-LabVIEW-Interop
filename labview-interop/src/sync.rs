@@ -22,13 +22,13 @@ type LVUserEventRef = MagicCookie;
 /// # Example
 /// ```
 /// # use labview_interop::sync::LVUserEvent;
-/// # use labview_interop::errors::MgErr;
+/// # use labview_interop::errors::LVStatusCode;
 ///#[no_mangle]
-///pub extern "C" fn generate_event_3(lv_user_event: *mut LVUserEvent<i32>) -> MgErr {
+///pub extern "C" fn generate_event_3(lv_user_event: *mut LVUserEvent<i32>) -> LVStatusCode {
 ///    let event = unsafe { *lv_user_event };
 ///    let result = event.post(&mut 3);
 ///    match result {
-///        Ok(_) => MgErr::NO_ERROR,
+///        Ok(_) => LVStatusCode::SUCCESS,
 ///        Err(err) => err.into(),
 ///    }
 ///}
@@ -49,7 +49,7 @@ impl<T> LVUserEvent<T> {
         let mg_err = unsafe {
             sync_api()?.post_lv_user_event(self.reference, data as *mut T as *mut c_void)
         };
-        mg_err.to_result(())
+        mg_err.to_specific_result(())
     }
 }
 
@@ -61,12 +61,12 @@ impl<T> LVUserEvent<T> {
 /// # Example
 /// ```
 /// # use labview_interop::sync::Occurence;
-/// # use labview_interop::errors::MgErr;
+/// # use labview_interop::errors::LVStatusCode;
 /// #[no_mangle]
-///pub extern "C" fn generate_occurence(occurence: *mut Occurence) -> MgErr {
+///pub extern "C" fn generate_occurence(occurence: *mut Occurence) -> LVStatusCode {
 ///    let result = unsafe { (*occurence).set() };
 ///    match result {
-///        Ok(_) => MgErr::NO_ERROR,
+///        Ok(_) => LVStatusCode::SUCCESS,
 ///        Err(err) => err.into(),
 ///    }
 ///}
@@ -79,6 +79,6 @@ impl Occurence {
     /// "set" generates the occurence event which can be detected by LabVIEW.
     pub fn set(&self) -> Result<()> {
         let mg_err = unsafe { sync_api()?.occur(self.0) };
-        mg_err.to_result(())
+        mg_err.to_specific_result(())
     }
 }

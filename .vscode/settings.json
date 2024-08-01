@@ -3,6 +3,7 @@
     "lldb.dereferencePointers": false,
     "lldb.consoleMode": "commands",
     "rust-analyzer.linkedProjects": [
-        ".\\labview-interop\\Cargo.toml"
-    ]
+        "./labview-interop/Cargo.toml"
+    ],
+    "rust-analyzer.diagnostics.useRustcErrorCode": true
 }

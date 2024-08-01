@@ -21,6 +21,7 @@ ndarray = { version = "0.15", optional = true }
 ctor = { version = "0.2.4" }
 encoding_rs = "0.8"
 codepage = "0.1"
+num_enum = "0.7.2"
 
 [features]
 default = ["sync"]

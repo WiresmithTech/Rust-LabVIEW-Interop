@@ -5,7 +5,7 @@
 use std::borrow::Cow;
 
 use crate::errors::LVInteropError;
-use crate::errors::MgErr;
+use crate::errors::LVStatusCode;
 use crate::labview_layout;
 use crate::memory::UPtr;
 use crate::types::LStrHandle;
@@ -15,7 +15,7 @@ labview_layout!(
     /// The cluster format used by LabVIEW for transmitting errors.
     pub struct ErrorCluster<'a> {
         status: LVBool,
-        code: MgErr,
+        code: LVStatusCode,
         source: LStrHandle<'a>,
     }
 );
@@ -51,7 +51,7 @@ impl<'a> ErrorCluster<'a> {
     /// Set the error cluster to a warning state.
     pub fn set_warning(
         &mut self,
-        code: MgErr,
+        code: LVStatusCode,
         source: &str,
         description: &str,
     ) -> Result<(), LVInteropError> {
@@ -63,7 +63,7 @@ impl<'a> ErrorCluster<'a> {
     /// Set the error cluster to an error state.
     pub fn set_error(
         &mut self,
-        code: MgErr,
+        code: LVStatusCode,
         source: &str,
         description: &str,
     ) -> Result<(), LVInteropError> {
@@ -77,7 +77,7 @@ impl<'a> ErrorCluster<'a> {
 /// error cluster with `ToLvError::write_error`.
 pub trait ToLvError {
     /// The code for the error. Default is 42.
-    fn code(&self) -> MgErr {
+    fn code(&self) -> LVStatusCode {
         42.into()
     }
 

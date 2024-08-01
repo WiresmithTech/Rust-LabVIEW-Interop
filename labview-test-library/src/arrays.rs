@@ -2,12 +2,12 @@
 //!
 //!
 
-use labview_interop::{
-    errors::MgErr,
-    types::{LVArrayHandle, LVBool},
-};
 use labview_interop::errors::LVInteropError;
 use labview_interop::types::array::LVArrayOwned;
+use labview_interop::{
+    errors::LVStatusCode,
+    types::{LVArrayHandle, LVBool},
+};
 
 #[no_mangle]
 pub extern "C" fn extract_from_array(
@@ -41,14 +41,14 @@ pub extern "C" fn extract_from_array_ndarray(
 
 #[cfg(target_pointer_width = "64")]
 #[no_mangle]
-pub extern "C" fn copy_from_ndarray(mut array_handle: LVArrayHandle<2, i32>) -> MgErr {
+pub extern "C" fn copy_from_ndarray(mut array_handle: LVArrayHandle<2, i32>) -> LVStatusCode {
     let ndarray = ndarray::arr2(&[[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
     let result = array_handle.copy_from_ndarray(&ndarray);
     result.into()
 }
 
 #[no_mangle]
-pub extern "C" fn resize_array(mut array_handle: LVArrayHandle<2, f64>) -> MgErr {
+pub extern "C" fn resize_array(mut array_handle: LVArrayHandle<2, f64>) -> LVStatusCode {
     let result = array_handle.resize_array([3, 3].into());
 
     match result {
@@ -58,22 +58,26 @@ pub extern "C" fn resize_array(mut array_handle: LVArrayHandle<2, f64>) -> MgErr
                     array_handle.set_value_unchecked(index, index as f64);
                 }
             }
-            MgErr::NO_ERROR
+            LVStatusCode::SUCCESS
         }
         Err(e) => e.into(),
     }
 }
 
 #[no_mangle]
-pub extern "C" fn is_array_empty(array_handle: LVArrayHandle<1, f64>, empty: *mut LVBool) -> MgErr {
+pub extern "C" fn is_array_empty(
+    array_handle: LVArrayHandle<1, f64>,
+    empty: *mut LVBool,
+) -> LVStatusCode {
     let size = array_handle.element_count();
     unsafe { *empty = (size == 0).into() }
-    MgErr::NO_ERROR
+    LVStatusCode::SUCCESS
 }
 
 #[no_mangle]
-pub extern "C" fn empty_owned_array_initialisation(array_handle: *mut LVArrayHandle<1, f64>) -> MgErr {
-
+pub extern "C" fn empty_owned_array_initialisation(
+    array_handle: *mut LVArrayHandle<1, f64>,
+) -> LVStatusCode {
     fn inner(array_handle: *mut LVArrayHandle<1, f64>) -> Result<(), LVInteropError> {
         let mut array = LVArrayOwned::<1, f64>::new_empty()?;
         array.resize_array([5].into())?;
@@ -88,7 +92,6 @@ pub extern "C" fn empty_owned_array_initialisation(array_handle: *mut LVArrayHan
         }
 
         Ok(())
-
     }
     inner(array_handle).into()
 }

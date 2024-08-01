@@ -1,7 +1,6 @@
-
 use labview_interop::types::LStrOwned;
 pub use labview_interop::types::{string::LStrHandle, LVBool};
-use labview_interop::{errors::MgErr, memory::UPtr, sync::LVUserEvent};
+use labview_interop::{errors::LVStatusCode, memory::UPtr, sync::LVUserEvent};
 use labview_interop::{labview_layout, memory::UHandle};
 
 /// This will check the provided handle is valid and also provide results from a null and made up handle
@@ -36,7 +35,7 @@ labview_layout!(
 #[no_mangle]
 pub extern "C" fn generate_event_cluster_handle_from_owned(
     lv_user_event: UPtr<LVUserEvent<UserEventCluster>>,
-) -> MgErr {
+) -> LVStatusCode {
     let mut mystr = LStrOwned::from_data(b"Hello World!").unwrap();
     let mystr_handle = mystr.handle_to_inner();
     let mut eventdata = UserEventCluster {
@@ -48,7 +47,6 @@ pub extern "C" fn generate_event_cluster_handle_from_owned(
     result.into()
 }
 
-
 labview_layout! {
     pub struct WrappedClusterWithString<'a> {
         pub string: LStrHandle<'a>,
@@ -58,9 +56,7 @@ labview_layout! {
 /// Copy the data from Rust to a LabVIEW cluster.
 #[cfg(target_pointer_width = "64")]
 #[no_mangle]
-pub extern "C" fn copy_cluster_data(
-    output_cluster: *mut WrappedClusterWithString,
-) -> MgErr {
+pub extern "C" fn copy_cluster_data(output_cluster: *mut WrappedClusterWithString) -> LVStatusCode {
     let string = LStrOwned::from_data(b"Hello World!").unwrap();
     let result = unsafe {
         let inner_string = &mut (*output_cluster).string;
@@ -73,10 +69,7 @@ pub extern "C" fn copy_cluster_data(
 ///
 /// We should be able to change one without the other changing.
 #[no_mangle]
-pub extern "C" fn handle_to_owned(
-    input: LStrHandle,
-    output: *mut LStrHandle,
-) -> MgErr {
+pub extern "C" fn handle_to_owned(input: LStrHandle, output: *mut LStrHandle) -> LVStatusCode {
     let result = unsafe {
         let mut owned_input = input.try_to_owned().unwrap();
         owned_input.set_str("Changed!").unwrap();
@@ -87,10 +80,7 @@ pub extern "C" fn handle_to_owned(
 
 /// Cloning a handle should not change the original.
 #[no_mangle]
-pub extern "C" fn clone_handle(
-    out1: *mut LStrHandle,
-    out2: *mut LStrHandle,
-) {
+pub extern "C" fn clone_handle(out1: *mut LStrHandle, out2: *mut LStrHandle) {
     let original = LStrOwned::from_data(b"Original").unwrap();
     let mut changed = original.clone();
     changed.set_str("Changed").unwrap();
