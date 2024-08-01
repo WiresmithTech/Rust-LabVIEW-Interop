@@ -64,6 +64,7 @@ use thiserror::Error;
 
 use crate::labview;
 use crate::types::LStrHandle;
+use crate::types::{ErrorClusterPtr, ToLvError};
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
@@ -174,9 +175,17 @@ pub struct LVError {
     code: LVStatusCode,
 }
 
-impl LVError {
+impl ToLvError for LVError {
+    fn source(&self) -> std::borrow::Cow<'_, str> {
+        "Rust".into()
+    }
+
+    fn code(&self) -> LVStatusCode {
+        self.code
+    }
+
     #[cfg(feature = "link")]
-    pub fn description(&self) -> Cow<'static, str> {
+    fn description(&self) -> Cow<'static, str> {
         static DEFAULT_STRING: &str = "LabVIEW-Interop: Description not retrievable";
         let mut error_text_ptr = MaybeUninit::<LStrHandle>::uninit();
 
