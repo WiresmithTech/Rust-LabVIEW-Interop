@@ -86,8 +86,8 @@ impl LVStatusCode {
         if self == Self::SUCCESS {
             Ok(success_value)
         } else {
-            match MgErrorCode::try_from(self) {
-                Ok(mg_err) => Err(MgError::from(mg_err).into()),
+            match MgError::try_from(self) {
+                Ok(mg_err) => Err(mg_err.into()),
                 Err(inter_err) => Err(inter_err),
             }
         }
@@ -131,15 +131,9 @@ impl From<LVStatusCode> for i32 {
     }
 }
 
-impl From<MgErrorCode> for LVStatusCode {
-    fn from(errcode: MgErrorCode) -> LVStatusCode {
-        errcode.into()
-    }
-}
-
 impl From<MgError> for LVStatusCode {
-    fn from(err: MgError) -> LVStatusCode {
-        MgErrorCode::from(err).into()
+    fn from(errcode: MgError) -> LVStatusCode {
+        errcode.into()
     }
 }
 
@@ -213,12 +207,6 @@ impl From<MgError> for LVError {
     }
 }
 
-impl From<MgErrorCode> for LVError {
-    fn from(errcode: MgErrorCode) -> LVError {
-        errcode.into()
-    }
-}
-
 impl From<LVStatusCode> for core::result::Result<(), LVError> {
     fn from(code: LVStatusCode) -> Self {
         match code {
@@ -251,179 +239,252 @@ impl Display for LVError {
 /// the memory manager only uses a subset of this huge error list. The subset is implemented in `MgError` using
 /// the official abbreviations.
 
-// Macro to define the MgError and MgErrorCode and the From conversions
-macro_rules! define_errors {
-    ($(($name:ident, $code:expr, $msg:expr)),*) => {
-        /// `MgErrorCode` is an enum of all error codes listed
-        /// in https://www.ni.com/docs/en-US/bundle/labview/page/labview-manager-function-errors.html
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, IntoPrimitive, TryFromPrimitive)]
-        #[repr(i32)]
-        pub enum MgErrorCode {
-            $(
-                $name = $code,
-            )*
-        }
-
-        /// `MgError` implements Error on top of the `MgErrorCode` and includes a description
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
-        #[repr(i32)]
-        pub enum MgError {
-            $(
-                #[error($msg)]
-                $name,
-            )*
-        }
-
-        impl From<MgErrorCode> for MgError {
-            fn from(code: MgErrorCode) -> Self {
-                match code {
-                    $(
-                        MgErrorCode::$name => MgError::$name,
-                    )*
-                }
-            }
-        }
-
-        impl From<MgError> for MgErrorCode {
-            fn from(error: MgError) -> Self {
-                match error {
-                    $(
-                        MgError::$name => MgErrorCode::$name,
-                    )*
-                }
-            }
-        }
-    };
+/// in https://www.ni.com/docs/en-US/bundle/labview/page/labview-manager-function-errors.html
+/// `MgError` implements Error on top of the `MgErrorCode` and includes a description
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Error, IntoPrimitive, TryFromPrimitive)]
+#[repr(i32)]
+pub enum MgError {
+    #[error("An input parameter is invalid.")]
+    MgArgErr = 1,
+    #[error("Memory is full.")]
+    MFullErr = 2,
+    #[error("End of file encountered.")]
+    FEof = 4,
+    #[error("File already open")]
+    FIsOpen = 5,
+    #[error("Generic file I/O error.")]
+    FIoErr = 6,
+    #[error("File not found")]
+    FNotFound = 7,
+    #[error("File permission error.")]
+    FNoPerm = 8,
+    #[error("Disk full")]
+    FDiskFull = 9,
+    #[error("Duplicate path")]
+    FDupPath = 10,
+    #[error("Too many files open.")]
+    FtMFOpen = 11,
+    #[error("Some system capacity necessary for operation is not enabled.")]
+    FNotEnabled = 12,
+    #[error(
+                "Failed to load dynamic library because of missing external symbols or dependencies, or because of an invalid file format."
+            )]
+    RfNotFound = 13,
+    #[error("Cannot add resource.")]
+    RAddFailed = 14,
+    #[error("Resource not found.")]
+    RNotFound = 15,
+    #[error("Image not found.")]
+    INotFound = 16,
+    #[error("Not enough memory to manipulate image.")]
+    IMemoryErr = 17,
+    #[error("DPen does not exist.")]
+    DPenNotExist = 18,
+    #[error("Configuration type invalid.")]
+    CfgBadType = 19,
+    #[error("Configuration token not found.")]
+    CfgTokenNotFound = 20,
+    #[error("Error occurred parsing configuration string.")]
+    CfgParseError = 21,
+    #[error("Configuration memory error.")]
+    CfgAllocError = 22,
+    #[error("Bad external code format.")]
+    EcLVSBFormatError = 23,
+    #[error("External subroutine not supported.")]
+    EcLVSBSubrError = 24,
+    #[error("External code not present.")]
+    EcLVSBNoCodeError = 25,
+    #[error("Null window.")]
+    WNullWindow = 26,
+    #[error("Destroy window error.")]
+    WDestroyMixup = 27,
+    #[error("Null menu.")]
+    MenuNullMenu = 28,
+    #[error("Print aborted")]
+    PAbortJob = 29,
+    #[error("Bad print record.")]
+    PBadPrintRecord = 30,
+    #[error("Print driver error.")]
+    PDriverError = 31,
+    #[error("Operating system error during print.")]
+    PWindowsError = 32,
+    #[error("Memory error during print.")]
+    PMemoryError = 33,
+    #[error("Print dialog error.")]
+    PDialogError = 34,
+    #[error("Generic print error.")]
+    PMiscError = 35,
+    #[error("Invalid device refnum.")]
+    DvInvalidRefnum = 36,
+    #[error("Device not found.")]
+    DvDeviceNotFound = 37,
+    #[error("Device parameter error.")]
+    DvParamErr = 38,
+    #[error("Device unit error.")]
+    DvUnitErr = 39,
+    #[error("Cannot open device.")]
+    DvOpenErr = 40,
+    #[error("Device call aborted.")]
+    DvAbortErr = 41,
+    #[error("Generic error.")]
+    BogusError = 42,
+    #[error("Operation cancelled by user.")]
+    CancelError = 43,
+    #[error("Object ID too low.")]
+    OMObjLowErr = 44,
+    #[error("Object ID too high.")]
+    OMObjHiErr = 45,
+    #[error("Object not in heap.")]
+    OMObjNotInHeapErr = 46,
+    #[error("Unknown heap.")]
+    OMOHeapNotKnownErr = 47,
+    #[error("Unknown object (invalid DefProc).")]
+    OMBadDPIdErr = 48,
+    #[error("Unknown object (DefProc not in table).")]
+    OMNoDPinTabErr = 49,
+    #[error("Message out of range.")]
+    OMMsgOutOfRangeErr = 50,
+    #[error("Null method.")]
+    OMMethodNullErr = 51,
+    #[error("Unknown message.")]
+    OMUnknownMsgErr = 52,
+    #[error("Manager call not supported.")]
+    MgNotSupported = 53,
+    #[error("The network address is ill-formed.")]
+    NcBadAddressErr = 54,
+    #[error("The network operation is in progress.")]
+    NcInProgress = 55,
+    #[error("The network operation exceeded the user-specified or system time limit.")]
+    NcTimeOutErr = 56,
+    #[error("The network connection is busy.")]
+    NcBusyErr = 57,
+    #[error("The network function is not supported by the system.")]
+    NcNotSupportedErr = 58,
+    #[error("The network is down, unreachable, or has been reset.")]
+    NcNetErr = 59,
+    #[error(
+                "The specified port or network address is currently in use. Select an available port or network address."
+            )]
+    NcAddrInUseErr = 60,
+    #[error("The system could not allocate the necessary memory.")]
+    NcSysOutOfMem = 61,
+    #[error("The system caused the network connection to be aborted.")]
+    NcSysConnAbortedErr = 62,
+    #[error("The network connection was refused by the server.")]
+    NcConnRefusedErr = 63,
+    #[error("The network connection is not yet established.")]
+    NcNotConnectedErr = 64,
+    #[error("The network connection is already established.")]
+    NcAlreadyConnectedErr = 65,
+    #[error("The network connection was closed by the peer.")]
+    NcConnClosedErr = 66,
+    #[error("Interapplication Manager initialization error.")]
+    AmInitErr = 67,
+    #[error("Bad occurrence.")]
+    OccBadOccurrenceErr = 68,
+    #[error("Handler does not know what occurrence to wait for.")]
+    OccWaitOnUnBoundHdlrErr = 69,
+    #[error("Occurrence queue overflow.")]
+    OccFunnyQOverFlowErr = 70,
+    #[error("File datalog type conflict.")]
+    FDataLogTypeConflict = 71,
+    #[error("Semaphore not signaled.")]
+    EcLVSBCannotBeCalledFromThread = 72,
+    #[error("Interapplication Manager unrecognized type error.")]
+    AmUnrecognizedType = 73,
+    #[error("Memory or data structure corrupt.")]
+    MCorruptErr = 74,
+    #[error("Failed to make temporary DLL.")]
+    EcLVSBErrorMakingTempDLL = 75,
+    #[error("Old CIN version.")]
+    EcLVSBOldCIN = 76,
+    #[error("Format specifier type mismatch.")]
+    FmtTypeMismatch = 81,
+    #[error("Unknown format specifier.")]
+    FmtUnknownConversion = 82,
+    #[error("Too few format specifiers.")]
+    FmtTooFew = 83,
+    #[error("Too many format specifiers.")]
+    FmtTooMany = 84,
+    #[error("Scan failed. The input string does not contain data in the expected format.")]
+    FmtScanError = 85,
+    #[error("Error converting to variant.")]
+    LvOLEConvertErr = 87,
+    #[error("Run-time menu error.")]
+    RtMenuErr = 88,
+    #[error("Another user tampered with the VI password.")]
+    PwdTampered = 89,
+    #[error("Variant attribute not found.")]
+    LvVariantAttrNotFound = 90,
+    #[error(
+                "The data type of the variant is not compatible with the data type wired to the type input."
+            )]
+    LvVariantTypeMismatch = 91,
+    #[error("The ActiveX event data was not available on the queue.")]
+    AxEventDataNotAvailable = 92,
+    #[error("ActiveX event information was not available.")]
+    AxEventStoreNotPresent = 93,
+    #[error("The occurrence associated with the ActiveX event was not found.")]
+    AxOccurrenceNotFound = 94,
+    #[error("The ActiveX event queue could not be created.")]
+    AxEventQueueNotCreated = 95,
+    #[error("ActiveX event information was not available in the type library.")]
+    AxEventInfoNotAvailable = 96,
+    #[error("A null or previously deleted refnum was passed in as an input.")]
+    OleNullRefnumPassed = 97,
+    #[error("IVI invalid downcast.")]
+    IviInvalidDowncast = 102,
+    #[error("No IVI class session opened.")]
+    IviInvalidClassSesn = 103,
+    #[error("Singlecast connections cannot send to multicast addresses.")]
+    NcSockNotMulticast = 108,
+    #[error("Multicast connections cannot send to singlecast addresses.")]
+    NcSockNotSinglecast = 109,
+    #[error("Specified IP address is not in multicast address range.")]
+    NcBadMulticastAddr = 110,
+    #[error("Cannot write to read-only multicast connection.")]
+    NcMcastSockReadOnly = 111,
+    #[error("Cannot read from write-only multicast connection.")]
+    NcMcastSockWriteOnly = 112,
+    #[error(
+                "A message sent on a datagram socket was larger than the internal message buffer or some other network limit, or the buffer used to receive a datagram was smaller than the datagram itself."
+            )]
+    NcDatagramMsgSzErr = 113,
+    #[error(
+                "Unflatten or byte stream read operation failed due to corrupt, unexpected, or truncated data."
+            )]
+    DataCorruptErr = 116,
+    #[error(
+                "Directory path supplied where a file path is required. A file path with the filename is required, but the supplied path is a path to a directory."
+            )]
+    RequireFullPathErr = 117,
+    #[error("The supplied folder path does not exist.")]
+    FolderNotExistErr = 118,
+    #[error("Illegal combination of Bluetooth discoverable and non-connectable modes.")]
+    NcBtInvalidModeErr = 119,
+    #[error("Error setting Bluetooth mode.")]
+    NcBtSetModeErr = 120,
+    #[error("Invalid GUID string.")]
+    MgBtInvalidGUIDStrErr = 121,
+    #[error(
+                "The resource you are attempting to open was created in a more recent version of LabVIEW and is incompatible with this version."
+            )]
+    RVersInFuture = 122,
 }
 
-impl TryFrom<LVStatusCode> for MgErrorCode {
+impl TryFrom<LVStatusCode> for MgError {
     type Error = LVInteropError;
     fn try_from(status: LVStatusCode) -> ::core::result::Result<Self, Self::Error> {
         // SUCCESS is not a valid error!
         if status == LVStatusCode::SUCCESS {
             return Err(LVInteropError::InvalidMgErrorCode);
         }
-        match MgErrorCode::try_from_primitive(status.0) {
+        match MgError::try_from_primitive(status.0) {
             Ok(code) => Ok(code),
             Err(_) => Err(LVInteropError::InvalidMgErrorCode),
         }
     }
 }
-
-impl Display for MgErrorCode {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-define_errors!(
-    (MgArgErr, 1, "An input parameter is invalid."),
-    (MFullErr, 2, "Memory is full."),
-    (FEof, 4, "End of file encountered."),
-    (FIsOpen, 5, "File already open"),
-    (FIoErr, 6, "Generic file I/O error."),
-    (FNotFound, 7, "File not found"),
-    (FNoPerm, 8, "File permission error."),
-    (FDiskFull, 9, "Disk full"),
-    (FDupPath, 10, "Duplicate path"),
-    (FtMFOpen, 11, "Too many files open."),
-    (FNotEnabled, 12, "Some system capacity necessary for operation is not enabled."),
-    (RfNotFound, 13, "Failed to load dynamic library because of missing external symbols or dependencies, or because of an invalid file format."),
-    (RAddFailed, 14, "Cannot add resource."),
-    (RNotFound, 15, "Resource not found."),
-    (INotFound, 16, "Image not found."),
-    (IMemoryErr, 17, "Not enough memory to manipulate image."),
-    (DPenNotExist, 18, "DPen does not exist."),
-    (CfgBadType, 19, "Configuration type invalid."),
-    (CfgTokenNotFound, 20, "Configuration token not found."),
-    (CfgParseError, 21, "Error occurred parsing configuration string."),
-    (CfgAllocError, 22, "Configuration memory error."),
-    (EcLVSBFormatError, 23, "Bad external code format."),
-    (EcLVSBSubrError, 24, "External subroutine not supported."),
-    (EcLVSBNoCodeError, 25, "External code not present."),
-    (WNullWindow, 26, "Null window."),
-    (WDestroyMixup, 27, "Destroy window error."),
-    (MenuNullMenu, 28, "Null menu."),
-    (PAbortJob, 29, "Print aborted"),
-    (PBadPrintRecord, 30, "Bad print record."),
-    (PDriverError, 31, "Print driver error."),
-    (PWindowsError, 32, "Operating system error during print."),
-    (PMemoryError, 33, "Memory error during print."),
-    (PDialogError, 34, "Print dialog error."),
-    (PMiscError, 35, "Generic print error."),
-    (DvInvalidRefnum, 36, "Invalid device refnum."),
-    (DvDeviceNotFound, 37, "Device not found."),
-    (DvParamErr, 38, "Device parameter error."),
-    (DvUnitErr, 39, "Device unit error."),
-    (DvOpenErr, 40, "Cannot open device."),
-    (DvAbortErr, 41, "Device call aborted."),
-    (BogusError, 42, "Generic error."),
-    (CancelError, 43, "Operation cancelled by user."),
-    (OMObjLowErr, 44, "Object ID too low."),
-    (OMObjHiErr, 45, "Object ID too high."),
-    (OMObjNotInHeapErr, 46, "Object not in heap."),
-    (OMOHeapNotKnownErr, 47,"Unknown heap."),
-    (OMBadDPIdErr, 48, "Unknown object (invalid DefProc)."),
-    (OMNoDPinTabErr, 49, "Unknown object (DefProc not in table)."),
-    (OMMsgOutOfRangeErr, 50, "Message out of range."),
-    (OMMethodNullErr, 51, "Null method."),
-    (OMUnknownMsgErr, 52, "Unknown message."),
-    (MgNotSupported, 53, "Manager call not supported."),
-    (NcBadAddressErr, 54, "The network address is ill-formed."),
-    (NcInProgress, 55, "The network operation is in progress."),
-    (NcTimeOutErr, 56, "The network operation exceeded the user-specified or system time limit."),
-    (NcBusyErr,	57, "The network connection is busy."),
-    (NcNotSupportedErr,	58, "The network function is not supported by the system."),
-    (NcNetErr, 59, "The network is down, unreachable, or has been reset."),
-    (NcAddrInUseErr, 60, "The specified port or network address is currently in use. Select an available port or network address."),
-    (NcSysOutOfMem, 61, "The system could not allocate the necessary memory."),
-    (NcSysConnAbortedErr, 62, "The system caused the network connection to be aborted."),
-    (NcConnRefusedErr, 63, "The network connection was refused by the server."),
-    (NcNotConnectedErr, 64, "The network connection is not yet established."),
-    (NcAlreadyConnectedErr, 65, "The network connection is already established."),
-    (NcConnClosedErr, 66, "The network connection was closed by the peer."),
-    (AmInitErr, 67, "Interapplication Manager initialization error."),
-    (OccBadOccurrenceErr, 68, "Bad occurrence."),
-    (OccWaitOnUnBoundHdlrErr, 69, "Handler does not know what occurrence to wait for."),
-    (OccFunnyQOverFlowErr, 70, "Occurrence queue overflow."),
-    (FDataLogTypeConflict, 71, "File datalog type conflict."),
-    (EcLVSBCannotBeCalledFromThread, 72, "Semaphore not signaled."),
-    (AmUnrecognizedType, 73, "Interapplication Manager unrecognized type error."),
-    (MCorruptErr, 74, "Memory or data structure corrupt."),
-    (EcLVSBErrorMakingTempDLL, 75, "Failed to make temporary DLL."),
-    (EcLVSBOldCIN, 76, "Old CIN version."),
-    (FmtTypeMismatch, 81, "Format specifier type mismatch."),
-    (FmtUnknownConversion, 82, "Unknown format specifier."),
-    (FmtTooFew, 83, "Too few format specifiers."),
-    (FmtTooMany, 84, "Too many format specifiers."),
-    (FmtScanError, 85, "Scan failed. The input string does not contain data in the expected format."),
-    (LvOLEConvertErr, 87, "Error converting to variant."),
-    (RtMenuErr, 88, "Run-time menu error."),
-    (PwdTampered, 89, "Another user tampered with the VI password."),
-    (LvVariantAttrNotFound, 90, "Variant attribute not found."),
-    (LvVariantTypeMismatch, 91, "The data type of the variant is not compatible with the data type wired to the type input."),
-    (AxEventDataNotAvailable, 92, "The ActiveX event data was not available on the queue."),
-    (AxEventStoreNotPresent, 93, "ActiveX event information was not available."),
-    (AxOccurrenceNotFound, 94, "The occurrence associated with the ActiveX event was not found."),
-    (AxEventQueueNotCreated, 95, "The ActiveX event queue could not be created."),
-    (AxEventInfoNotAvailable, 96, "ActiveX event information was not available in the type library."),
-    (OleNullRefnumPassed, 97, "A null or previously deleted refnum was passed in as an input."),
-    (IviInvalidDowncast, 102, "IVI invalid downcast."),
-    (IviInvalidClassSesn, 103, "No IVI class session opened."),
-    (NcSockNotMulticast, 108, "Singlecast connections cannot send to multicast addresses."),
-    (NcSockNotSinglecast, 109, "Multicast connections cannot send to singlecast addresses."),
-    (NcBadMulticastAddr, 110, "Specified IP address is not in multicast address range."),
-    (NcMcastSockReadOnly, 111, "Cannot write to read-only multicast connection."),
-    (NcMcastSockWriteOnly, 112, "Cannot read from write-only multicast connection."),
-    (NcDatagramMsgSzErr, 113, "A message sent on a datagram socket was larger than the internal message buffer or some other network limit, or the buffer used to receive a datagram was smaller than the datagram itself."),
-    (DataCorruptErr, 116, "Unflatten or byte stream read operation failed due to corrupt, unexpected, or truncated data."),
-    (RequireFullPathErr, 117, "Directory path supplied where a file path is required. A file path with the filename is required, but the supplied path is a path to a directory."),
-    (FolderNotExistErr, 118, "The supplied folder path does not exist."),
-    (NcBtInvalidModeErr, 119, "Illegal combination of Bluetooth discoverable and non-connectable modes."),
-    (NcBtSetModeErr, 120, "Error setting Bluetooth mode."),
-    (MgBtInvalidGUIDStrErr, 121, "Invalid GUID string."),
-    (RVersInFuture, 122, "The resource you are attempting to open was created in a more recent version of LabVIEW and is incompatible with this version.")
-);
 
 /// # Examples
 ///
@@ -504,68 +565,5 @@ mod tests {
 
         let status = LVStatusCode::from(1);
         assert_eq!(status, LVStatusCode(1));
-    }
-
-    #[test]
-    fn test_mgerrorcode_to_mgerror() {
-        define_errors!(
-            (OutOfMemory, 1, "Memory is full"),
-            (InvalidHandle, 2, "Invalid handle")
-        );
-
-        let error_code = MgErrorCode::OutOfMemory;
-        let error: MgError = error_code.into();
-        assert_eq!(error, MgError::OutOfMemory);
-
-        let error_code = MgErrorCode::InvalidHandle;
-        let error: MgError = error_code.into();
-        assert_eq!(error, MgError::InvalidHandle);
-    }
-
-    #[test]
-    fn test_mgerror_to_mgerrorcode() {
-        define_errors!(
-            (OutOfMemory, 1, "Memory is full"),
-            (InvalidHandle, 2, "Invalid handle")
-        );
-
-        let error = MgError::OutOfMemory;
-        let error_code: MgErrorCode = error.into();
-        assert_eq!(error_code, MgErrorCode::OutOfMemory);
-
-        let error = MgError::InvalidHandle;
-        let error_code: MgErrorCode = error.into();
-        assert_eq!(error_code, MgErrorCode::InvalidHandle);
-    }
-
-    #[test]
-    fn test_lvstatuscode_to_mgerrorcode() {
-        define_errors!(
-            (OutOfMemory, 1, "Memory is full"),
-            (InvalidHandle, 2, "Invalid handle")
-        );
-
-        let status = LVStatusCode::from(1);
-        let result: core::result::Result<MgErrorCode, LVInteropError> =
-            MgErrorCode::try_from(status);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), MgErrorCode::OutOfMemory);
-
-        let status = LVStatusCode::from(0);
-        let result: core::result::Result<MgErrorCode, LVInteropError> =
-            MgErrorCode::try_from(status);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_lvstatuscode_to_result() {
-        let status = LVStatusCode::from(1);
-        let result: core::result::Result<(), LVInteropError> = Result::try_from(status).unwrap();
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), MgError::MFullErr);
-
-        let status = LVStatusCode::from(0);
-        let result: core::result::Result<(), MgError> = Result::try_from(status).unwrap();
-        assert!(result.is_ok());
     }
 }
