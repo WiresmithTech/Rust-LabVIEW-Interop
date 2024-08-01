@@ -163,7 +163,7 @@ impl From<LVInteropError> for LVStatusCode {
     fn from(value: LVInteropError) -> Self {
         match value {
             LVInteropError::LabviewMgError(e) => e.into(),
-            _ => LVStatusCode(-1),
+            _ => LVStatusCode(-1), // TODO
         }
     }
 }
@@ -266,6 +266,7 @@ macro_rules! define_errors {
 
         /// `MgError` implements Error on top of the `MgErrorCode` and includes a description
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
+        #[repr(i32)]
         pub enum MgError {
             $(
                 #[error($msg)]
@@ -448,27 +449,49 @@ define_errors!(
 /// assert_eq!(error_code, MgErrorCode::OutOfMemory);
 /// ```
 
+/// LVInteropError is our internal Error type
+/// in order to be able to easily convert it to LV ErrorClusters all Errors should possess an
+/// Error Code
+///
+/// Our choice of a custom ranges in Labview is (see comment above on valid ranges)
+/// 542,000 to 542,999
 #[derive(Error, Debug)]
+#[repr(i32)]
 pub enum LVInteropError {
-    #[error("Invalid numeric status code for conversion into enumerated error code")]
-    InvalidMgErrorCode,
     #[error("Internal LabVIEW Manager Error: {0}")]
     LabviewMgError(#[from] MgError),
-    #[error("Invalid handle when valid handle is required")]
-    InvalidHandle,
+    #[error("LabVIEW Interop General Error. Propably because of a missing implementation.")]
+    Misc = 542_000,
     #[error("LabVIEW API unavailable. Probably because it isn't being run in LabVIEW")]
-    NoLabviewApi,
+    NoLabviewApi = 542_001,
+    #[error("Invalid handle when valid handle is required")]
+    InvalidHandle = 542_002,
     #[error("LabVIEW arrays can only have dimensions of i32 range.")]
-    ArrayDimensionsOutOfRange,
+    ArrayDimensionsOutOfRange = 542_003,
     #[error(
         "Array dimensions don't match. You may require the link feature to enable auto-resizing."
     )]
-    ArrayDimensionMismatch,
+    ArrayDimensionMismatch = 542_004,
     #[error("Creating of handle in LabVIEW memory manager failed. Perhaps you are out of memory?")]
-    HandleCreationFailed,
+    HandleCreationFailed = 542_005,
+    #[error("Invalid numeric status code for conversion into enumerated error code")]
+    InvalidMgErrorCode = 542_006,
 }
 
 pub type Result<T> = std::result::Result<T, LVInteropError>;
+
+/// In Order to use our internal LVInteropError in extern "C" function returns and for
+/// communicating the Error to LV as an Errorcluster we need to implement
+impl From<LVInteropError> for LVError {
+    fn from(interop: LVInteropError) -> LVError {
+        match interop {
+            LVInteropError::LabviewMgError(mgerr) => mgerr.into(),
+            _ => LVError {
+                code: interop.into(),
+            },
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
