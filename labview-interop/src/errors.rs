@@ -230,7 +230,12 @@ impl From<LVStatusCode> for core::result::Result<(), LVError> {
 
 impl Display for LVError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}: {}", self.code, self.description())
+        write!(
+            f,
+            "{}: {}",
+            self.code,
+            <LVError as ToLvError>::description(self)
+        )
     }
 }
 
