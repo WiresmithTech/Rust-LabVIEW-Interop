@@ -68,7 +68,7 @@ use crate::types::{ErrorClusterPtr, ToLvError};
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-/// ´LVStatusCode´ is a newtype on i32 to represent all potential error codes and 0 as a success value.
+/// ´LVStatusCode´ is a newtype on i32 to represent all potential error codes and SUCCESS (0) as a success value.
 ///
 /// This kind of status code corresponds to the Rust Result types.
 /// Therefore it is named status and not error on purpose. There is no checks or guarantees if the code is a valid range or has an official labview
@@ -157,7 +157,7 @@ impl From<LVInteropError> for LVStatusCode {
     fn from(value: LVInteropError) -> Self {
         match value {
             LVInteropError::LabviewMgError(e) => e.into(),
-            _ => LVStatusCode(-1), // TODO
+            other => other.code(), // TODO
         }
     }
 }
@@ -227,6 +227,10 @@ impl Display for LVError {
     }
 }
 
+/// MgError is the subset of LabVIEW errors that may occur when dealing with the memory manager
+/// So in the context of Rust-LabVIEW-interop these are the kind of labview errors we may trigger within the library
+///
+///
 /// The `MgError` / `MgErrorCode` implement From in both directions. Additionally IntoPrimitive and TryFromPrimitive is derived
 /// to enable the conversion from and to int primitives.
 ///
