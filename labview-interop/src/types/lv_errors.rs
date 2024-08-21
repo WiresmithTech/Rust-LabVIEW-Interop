@@ -6,6 +6,7 @@ use std::borrow::Cow;
 
 use crate::errors::LVInteropError;
 use crate::errors::LVStatusCode;
+use crate::errors::MgError;
 use crate::labview_layout;
 use crate::memory::UPtr;
 use crate::types::LStrHandle;
@@ -78,7 +79,7 @@ impl<'a> ErrorCluster<'a> {
 pub trait ToLvError {
     /// The code for the error. Default is 42.
     fn code(&self) -> LVStatusCode {
-        42.into()
+        MgError::BogusError.into() // code 42, Generic Error
     }
 
     /// True if is error. Default is true.

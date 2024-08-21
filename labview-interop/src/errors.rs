@@ -131,12 +131,6 @@ impl From<LVStatusCode> for i32 {
     }
 }
 
-impl From<MgError> for LVStatusCode {
-    fn from(errcode: MgError) -> LVStatusCode {
-        errcode.into()
-    }
-}
-
 impl Display for LVStatusCode {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.0)
@@ -198,12 +192,6 @@ impl ToLvError for LVError {
             }
         }
         Cow::Borrowed(DEFAULT_STRING)
-    }
-}
-
-impl From<MgError> for LVError {
-    fn from(mgerr: MgError) -> LVError {
-        LVError { code: mgerr.into() }
     }
 }
 
@@ -490,6 +478,19 @@ impl TryFrom<LVStatusCode> for MgError {
     }
 }
 
+impl From<MgError> for LVStatusCode {
+    fn from(errcode: MgError) -> LVStatusCode {
+        let erri32: i32 = errcode.into();
+        erri32.into()
+    }
+}
+
+impl From<MgError> for LVError {
+    fn from(mgerr: MgError) -> LVError {
+        LVError { code: mgerr.into() }
+    }
+}
+
 /// # Examples
 ///
 /// ```
@@ -563,11 +564,46 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_lvstatuscode_from_i32() {
+    fn test_error_lvstatuscode_from_i32() {
         let status = LVStatusCode::from(0);
         assert_eq!(status, LVStatusCode::SUCCESS);
 
         let status = LVStatusCode::from(1);
         assert_eq!(status, LVStatusCode(1));
+
+        let status: LVStatusCode = 42.into();
+        assert_eq!(status, LVStatusCode(42));
+    }
+
+    #[test]
+    fn test_error_lvstatuscode_from_mgerror() {
+        let err = MgError::BogusError;
+        let status: LVStatusCode = err.into();
+
+        assert_eq!(LVStatusCode::from(42), status)
+    }
+
+    #[test]
+    fn test_error_lvinteroperror_from_lvstatuscode() {
+        let status = LVStatusCode::from(42);
+        let mut err = LVInteropError::Misc;
+        if let Ok(mgerr) = MgError::try_from(status) {
+            err = LVInteropError::LabviewMgError(mgerr)
+        }
+
+        let st: LVStatusCode = 42.into();
+        err.code();
+        assert_eq!(st, status)
+    }
+
+    #[test]
+    fn test_lvstatuscode_from_lvinteroperror() {
+        //let err: LVInteropError = MgError::BogusError.into();
+        let err = LVStatusCode::from(42);
+        //assert
+
+        //let num: i32 = err.code().into();
+        //assert_eq!(num, 42);
+        //println!("{}", err);
     }
 }
