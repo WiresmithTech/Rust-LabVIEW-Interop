@@ -149,10 +149,11 @@ impl<T> From<Result<T>> for LVStatusCode {
 }
 impl From<LVInteropError> for LVStatusCode {
     fn from(value: LVInteropError) -> Self {
-        match value {
-            LVInteropError::LabviewMgError(e) => e.into(),
-            other => other.code(), // TODO
-        }
+        let num = match value {
+            LVInteropError::LabviewMgError(e) => e as i32,
+            LVInteropError::InternalError(e) => e as i32, // TODO
+        };
+        num.into()
     }
 }
 
@@ -469,11 +470,11 @@ impl TryFrom<LVStatusCode> for MgError {
     fn try_from(status: LVStatusCode) -> ::core::result::Result<Self, Self::Error> {
         // SUCCESS is not a valid error!
         if status == LVStatusCode::SUCCESS {
-            return Err(LVInteropError::InvalidMgErrorCode);
+            return Err(InternalError::InvalidMgErrorCode.into());
         }
         match MgError::try_from_primitive(status.0) {
             Ok(code) => Ok(code),
-            Err(_) => Err(LVInteropError::InvalidMgErrorCode),
+            Err(_) => Err(InternalError::InvalidMgErrorCode.into()),
         }
     }
 }
@@ -523,9 +524,7 @@ impl From<MgError> for LVError {
 /// 542,000 to 542,999
 #[derive(Error, Debug)]
 #[repr(i32)]
-pub enum LVInteropError {
-    #[error("Internal LabVIEW Manager Error: {0}")]
-    LabviewMgError(#[from] MgError),
+pub enum InternalError {
     #[error("LabVIEW Interop General Error. Propably because of a missing implementation.")]
     Misc = 542_000,
     #[error("LabVIEW API unavailable. Probably because it isn't being run in LabVIEW")]
@@ -542,6 +541,14 @@ pub enum LVInteropError {
     HandleCreationFailed = 542_005,
     #[error("Invalid numeric status code for conversion into enumerated error code")]
     InvalidMgErrorCode = 542_006,
+}
+
+#[derive(Error, Debug)]
+pub enum LVInteropError {
+    #[error("Internal LabVIEW Manager Error: {0}")]
+    LabviewMgError(#[from] MgError),
+    #[error("Internal Error: {0}")]
+    InternalError(#[from] InternalError),
 }
 
 pub type Result<T> = std::result::Result<T, LVInteropError>;
@@ -586,7 +593,7 @@ mod tests {
     #[test]
     fn test_error_lvinteroperror_from_lvstatuscode() {
         let status = LVStatusCode::from(42);
-        let mut err = LVInteropError::Misc;
+        let mut err: LVInteropError = InternalError::Misc.into();
         if let Ok(mgerr) = MgError::try_from(status) {
             err = LVInteropError::LabviewMgError(mgerr)
         }
@@ -597,9 +604,18 @@ mod tests {
     }
 
     #[test]
-    fn test_lvstatuscode_from_lvinteroperror() {
-        //let err: LVInteropError = MgError::BogusError.into();
-        let err = LVStatusCode::from(42);
+    fn test_error_lvstatuscode_from_lvinteroperror() {
+        let err: LVInteropError = MgError::BogusError.into();
+        let status: LVStatusCode = LVStatusCode::from(42);
+        assert_eq!(status, err.into());
+
+        let err: LVInteropError = InternalError::NoLabviewApi.into();
+        let status: LVStatusCode = LVStatusCode::from(542_001);
+
+        println!("{}", status);
+        assert_eq!(status, err.into());
+
+        //let err = LVStatusCode::from(42);
         //assert
 
         //let num: i32 = err.code().into();

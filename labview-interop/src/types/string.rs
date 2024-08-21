@@ -239,8 +239,8 @@ impl LStrOwned {
 
 #[cfg(test)]
 mod tests {
-    use std::alloc::{alloc, Layout, LayoutError};
     use super::*;
+    use std::alloc::{alloc, Layout, LayoutError};
 
     /// Implements a questionable allocation strategy based on
     /// https://www.reddit.com/r/rust/comments/mq3kqe/is_this_the_best_way_to_do_custom_dsts_unsized/
@@ -290,13 +290,10 @@ mod tests {
     #[test]
     fn test_lstr_handle_debug() {
         let string = LStr::boxed_from_str("Hello World");
-            let mut pointer = Box::into_raw(string);
-            let raw_handle = std::ptr::addr_of_mut!(pointer);
-            let handle = LStrHandle::from_raw(raw_handle);
-            let debug = format!("{:?}", handle);
-            assert!(debug.contains("Hello World"));
-
+        let mut pointer = Box::into_raw(string);
+        let raw_handle = std::ptr::addr_of_mut!(pointer);
+        let handle = LStrHandle::from_raw(raw_handle);
+        let debug = format!("{:?}", handle);
+        assert!(debug.contains("Hello World"));
     }
-
-
 }

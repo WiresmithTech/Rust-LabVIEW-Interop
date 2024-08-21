@@ -8,7 +8,7 @@ use ctor::ctor;
 use dlopen2::wrapper::{Container, WrapperApi};
 
 use crate::{
-    errors::{LVInteropError, LVStatusCode, Result},
+    errors::{InternalError, LVStatusCode, Result},
     memory::MagicCookie,
 };
 
@@ -26,14 +26,16 @@ pub(crate) type UPtrValue = usize;
 static SYNC_API: Option<Container<SyncApi>> = unsafe { Container::load_self().ok() };
 
 pub fn sync_api() -> Result<&'static Container<SyncApi>> {
-    SYNC_API.as_ref().ok_or(LVInteropError::NoLabviewApi)
+    SYNC_API.as_ref().ok_or(InternalError::NoLabviewApi.into())
 }
 
 #[ctor]
 static MEMORY_API: Option<Container<MemoryApi>> = unsafe { Container::load_self().ok() };
 
 pub fn memory_api() -> Result<&'static Container<MemoryApi>> {
-    MEMORY_API.as_ref().ok_or(LVInteropError::NoLabviewApi)
+    MEMORY_API
+        .as_ref()
+        .ok_or(InternalError::NoLabviewApi.into())
 }
 
 /// The LabVIEW synchronisation features are part of the Support Manager API.

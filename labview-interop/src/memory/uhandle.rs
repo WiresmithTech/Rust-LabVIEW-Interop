@@ -1,5 +1,5 @@
 use super::LVCopy;
-use crate::errors::LVInteropError;
+use crate::errors::InternalError;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
@@ -39,7 +39,7 @@ impl<'a, T: ?Sized> UHandle<'a, T> {
         self.0
             .as_ref()
             .and_then(|ptr| ptr.as_ref())
-            .ok_or(LVInteropError::InvalidHandle)
+            .ok_or(InternalError::InvalidHandle.into())
     }
 
     /// Get a mutable reference to the internal type. Errors if handle contains a null.
@@ -56,7 +56,7 @@ impl<'a, T: ?Sized> UHandle<'a, T> {
         self.0
             .as_ref()
             .and_then(|ptr| ptr.as_mut())
-            .ok_or(LVInteropError::InvalidHandle)
+            .ok_or(InternalError::InvalidHandle.into())
     }
 
     /// Check the validity of the handle to ensure it wont panic later.
@@ -232,7 +232,7 @@ impl<'a, T: ?Sized + LVCopy + 'static> UHandle<'a, T> {
     ) -> crate::errors::Result<()> {
         // Validate this handle first to improve safety.
         if !self.valid() {
-            return Err(LVInteropError::InvalidHandle);
+            return Err(InternalError::InvalidHandle.into());
         }
         let error = crate::labview::memory_api()?.copy_handle(other as *mut usize, self.0 as usize);
         error.to_specific_result(())

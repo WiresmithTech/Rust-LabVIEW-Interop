@@ -1,7 +1,7 @@
 //! A module for working with LabVIEW pointers.
 
+use crate::errors::InternalError;
 use std::ops::{Deref, DerefMut};
-use crate::errors::LVInteropError;
 
 /// A pointer from LabVIEW for the data.
 ///
@@ -27,7 +27,7 @@ impl<T: ?Sized> UPtr<T> {
     ///* The pointer must point to an initialized instance of T.
     ///* You must enforce Rust's aliasing rules, since the returned lifetime 'a is arbitrarily chosen and does not necessarily reflect the actual lifetime of the data. In particular, while this reference exists, the memory the pointer points to must not get mutated (except inside UnsafeCell).
     pub unsafe fn as_ref(&self) -> crate::errors::Result<&T> {
-        self.0.as_ref().ok_or(LVInteropError::InvalidHandle)
+        self.0.as_ref().ok_or(InternalError::InvalidHandle.into())
     }
 
     /// Get a mutable reference to the internal type. Errors if pointer contains a null.
@@ -41,7 +41,7 @@ impl<T: ?Sized> UPtr<T> {
     /// * The pointer must point to an initialized instance of T.
     /// * You must enforce Rust’s aliasing rules, since the returned lifetime 'a is arbitrarily chosen and does not necessarily reflect the actual lifetime of the data. In particular, while this reference exists, the memory the pointer points to must not get accessed (read or written) through any other pointer.
     pub unsafe fn as_ref_mut(&self) -> crate::errors::Result<&mut T> {
-        self.0.as_mut().ok_or(LVInteropError::InvalidHandle)
+        self.0.as_mut().ok_or(InternalError::InvalidHandle.into())
     }
 }
 

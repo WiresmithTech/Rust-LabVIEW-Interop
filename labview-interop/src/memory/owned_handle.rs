@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
 use super::{LVCopy, UHandle};
-use crate::errors::{LVInteropError, Result};
+use crate::errors::{InternalError, Result};
 use crate::labview::memory_api;
 
 /// A value allocated in the LabVIEW memory managed by Rust.
@@ -60,7 +60,7 @@ impl<T: Copy + 'static> OwnedUHandle<T> {
         let handle = unsafe { memory_api()?.new_handle(std::mem::size_of::<T>()) } as *mut *mut T;
 
         if handle.is_null() {
-            Err(LVInteropError::HandleCreationFailed)
+            Err(InternalError::HandleCreationFailed.into())
         } else {
             // Copy the value into the handle.
             // # Safety - these pointers have just been created by the memory manager and we checked null.
@@ -86,7 +86,7 @@ impl<T: ?Sized> OwnedUHandle<T> {
     ) -> Result<Self> {
         let handle = memory_api()?.new_handle(0);
         if handle.is_null() {
-            Err(LVInteropError::HandleCreationFailed)
+            Err(InternalError::HandleCreationFailed.into())
         } else {
             let mut new_value = UHandle(handle as *mut *mut T, PhantomData);
             init_routine(&mut new_value)?;
