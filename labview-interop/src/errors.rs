@@ -495,25 +495,21 @@ impl From<MgError> for LVError {
 /// # Examples
 ///
 /// ```
-/// use labview_interop::error::{LVStatusCode, MgErrorCode, MgError, LVInteropError};
+/// use labview_interop::errors::{LVStatusCode, MgError, LVInteropError};
 /// use std::convert::TryFrom;
 ///
-/// let status = LVStatusCode::from(1);
-/// let result: Result<MgErrorCode, LVInteropError> = MgErrorCode::try_from(status);
+/// let status = LVStatusCode::from(2);
+/// let result: Result<MgError, LVInteropError> = MgError::try_from(status);
 /// assert!(result.is_ok());
-/// assert_eq!(result.unwrap(), MgErrorCode::OutOfMemory);
+/// assert_eq!(result.unwrap(), MgError::MFullErr);
 ///
 /// let status = LVStatusCode::from(0);
-/// let result: Result<MgErrorCode, LVInteropError> = MgErrorCode::try_from(status);
+/// let result: Result<MgError, LVInteropError> = MgError::try_from(status);
 /// assert!(result.is_err());
 ///
-/// let error_code = MgErrorCode::InvalidHandle;
-/// let error: MgError = error_code.into();
-/// assert_eq!(error, MgError::InvalidHandle);
-///
-/// let error = MgError::MFullErr;
-/// let error_code: MgErrorCode = error.into();
-/// assert_eq!(error_code, MgErrorCode::OutOfMemory);
+/// let error = MgError::BogusError;
+/// let error_code: i32 = error.into();
+/// assert_eq!(error_code, 42);
 /// ```
 
 /// LVInteropError is our internal Error type

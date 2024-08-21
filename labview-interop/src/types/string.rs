@@ -109,12 +109,12 @@ impl LStr {
     /// # Example
     /// ```
     /// use labview_interop::types::LStrHandle;
-    /// use labview_interop::errors::MgErr;
+    /// use labview_interop::errors::LVStatusCode;
     /// #[no_mangle]
-    /// pub extern "C" fn string_check(mut string: LStrHandle) -> MgErr {
+    /// pub extern "C" fn string_check(mut string: LStrHandle) -> LVStatusCode {
     ///    let string_value = string.to_string();
     ///    format!("Read value: {string_value}");
-    ///    MgErr::NO_ERROR
+    ///    LVStatusCode::SUCCESS
     /// }
     ///```
     pub fn to_rust_string(&self) -> Cow<str> {
@@ -157,9 +157,9 @@ impl<'a> LStrHandle<'a> {
     /// # Example
     /// ```
     /// use labview_interop::types::LStrHandle;
-    /// use labview_interop::errors::MgErr;
+    /// use labview_interop::errors::LVStatusCode;
     /// #[no_mangle]
-    /// pub extern "C" fn hello_world(mut string: LStrHandle) -> MgErr {
+    /// pub extern "C" fn hello_world(mut string: LStrHandle) -> LVStatusCode {
     ///    let result = string.set(b"Hello World");
     ///    result.into()
     /// }
@@ -223,7 +223,7 @@ impl LStrOwned {
     /// # Example
     /// ```
     /// use labview_interop::types::{LStrHandle, LStrOwned};
-    /// use labview_interop::errors::MgErr;
+    /// use labview_interop::errors::LVStatusCode;
     /// #[no_mangle]
     /// pub extern "C" fn hello_world(mut strn: String, output_string: *mut LStrHandle) {
     ///    let handle = LStrOwned::from_data(strn.as_bytes()).unwrap();
