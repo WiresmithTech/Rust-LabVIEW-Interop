@@ -170,6 +170,7 @@ pub struct MemoryApi {
     ///
     /// Returns `LVBoolean`: false -> This function did not find the value of errCode in any of the error text files.
     ///                      true -> This function found the value of errCode in one of the error text files.
+    #[dlopen2_name = "NIGetOneErrorCode"]
     error_code_description:
         unsafe extern "C" fn(error_code: i32, error_text: *mut UHandleValue) -> bool,
 

@@ -68,11 +68,20 @@ use crate::types::{ErrorClusterPtr, ToLvError};
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-/// ´LVStatusCode´ is a newtype on i32 to represent all potential error codes and SUCCESS (0) as a success value.
+/// ´LVStatusCode´ is a transparent newtype on i32 to represent all potential error codes and SUCCESS (0) as a success value.
 ///
 /// This kind of status code corresponds to the Rust Result types.
 /// Therefore it is named status and not error on purpose. There is no checks or guarantees if the code is a valid range or has an official labview
 /// definition.
+///
+/// # Examples
+///
+/// ```
+/// use labview_interop::errors::LVStatusCode;
+/// let status = LVStatusCode::from(42);
+///
+/// assert_eq!(status, 42.into());
+/// ```
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct LVStatusCode(i32);
@@ -617,5 +626,25 @@ mod tests {
         //let num: i32 = err.code().into();
         //assert_eq!(num, 42);
         //println!("{}", err);
+    }
+
+    // test transparency of status type
+    #[test]
+    fn test_error_lvstatuscode_from_externc() {
+        // Mock the external C function
+        unsafe extern "C" fn mock_externc() -> i32 {
+            542_002 // Simulate a C function returning an `i32`
+        }
+
+        fn post_lv_user_event_safe() -> LVStatusCode {
+            let result: i32 = unsafe { mock_externc() };
+
+            // Transmute the i32 result to LVStatusCode
+            unsafe { std::mem::transmute(result) }
+        }
+
+        let lv_status = post_lv_user_event_safe();
+
+        assert_eq!(lv_status, LVStatusCode(542_002));
     }
 }
