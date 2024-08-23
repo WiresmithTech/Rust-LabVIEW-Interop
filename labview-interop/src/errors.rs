@@ -527,7 +527,7 @@ impl From<MgError> for LVError {
 ///
 /// Our choice of a custom ranges in Labview is (see comment above on valid ranges)
 /// 542,000 to 542,999
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone, Copy, PartialEq)]
 #[repr(i32)]
 pub enum InternalError {
     #[error("LabVIEW Interop General Error. Propably because of a missing implementation.")]
@@ -548,7 +548,7 @@ pub enum InternalError {
     InvalidMgErrorCode = 542_006,
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone, Copy, PartialEq)]
 pub enum LVInteropError {
     #[error("Internal LabVIEW Manager Error: {0}")]
     LabviewMgError(#[from] MgError),
