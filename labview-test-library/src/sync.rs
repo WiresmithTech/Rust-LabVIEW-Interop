@@ -1,5 +1,5 @@
 use labview_interop::{
-    errors::MgErr,
+    errors::LVStatusCode,
     labview_layout,
     memory::UPtr,
     sync::{LVUserEvent, Occurence},
@@ -7,7 +7,7 @@ use labview_interop::{
 };
 
 #[no_mangle]
-pub extern "C" fn generate_event_3(lv_user_event: *mut LVUserEvent<i32>) -> MgErr {
+pub extern "C" fn generate_event_3(lv_user_event: *mut LVUserEvent<i32>) -> LVStatusCode {
     let event = unsafe { *lv_user_event };
     let result = event.post(&mut 3);
     result.into()
@@ -23,7 +23,7 @@ labview_layout!(
 #[no_mangle]
 pub extern "C" fn generate_event_cluster(
     lv_user_event: UPtr<LVUserEvent<UserEventClusterOwned>>,
-) -> MgErr {
+) -> LVStatusCode {
     let mystr = LStrOwned::from_data(b"Hello World!").unwrap();
     let mut eventdata = UserEventClusterOwned {
         eventno: 2,
@@ -35,7 +35,7 @@ pub extern "C" fn generate_event_cluster(
 }
 
 #[no_mangle]
-pub extern "C" fn generate_occurence(occurence: *mut Occurence) -> MgErr {
+pub extern "C" fn generate_occurence(occurence: *mut Occurence) -> LVStatusCode {
     let result = unsafe { (*occurence).set() };
     result.into()
 }

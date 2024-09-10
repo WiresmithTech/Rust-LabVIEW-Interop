@@ -1,13 +1,12 @@
 //! The arrays module covers LabVIEW multidimensional array.
 //!
 
-
 #[cfg(feature = "link")]
 mod memory;
 #[cfg(all(feature = "ndarray", target_pointer_width = "64"))]
 mod ndarray;
 
-use crate::errors::LVInteropError;
+use crate::errors::{InternalError, LVInteropError};
 use crate::labview_layout;
 use crate::memory::{LVCopy, OwnedUHandle, UHandle};
 
@@ -36,7 +35,7 @@ impl<const D: usize> TryFrom<&[usize; D]> for LVArrayDims<D> {
         for (into, &from) in dimensions.iter_mut().zip(value.iter()) {
             *into = from
                 .try_into()
-                .map_err(|_| LVInteropError::ArrayDimensionsOutOfRange)?
+                .map_err(|_| LVInteropError::from(InternalError::ArrayDimensionsOutOfRange))?
         }
         Ok(dimensions.into())
     }
@@ -48,7 +47,7 @@ impl<const D: usize> TryFrom<&[usize]> for LVArrayDims<D> {
     fn try_from(value: &[usize]) -> Result<Self, Self::Error> {
         let array: &[usize; D] = value
             .try_into()
-            .map_err(|_| LVInteropError::ArrayDimensionMismatch)?;
+            .map_err(|_| LVInteropError::from(InternalError::ArrayDimensionMismatch))?;
         array.try_into()
     }
 }
@@ -179,8 +178,6 @@ pub type LVArrayHandle<'a, const D: usize, T> = UHandle<'a, LVArray<D, T>>;
 /// Definition of an owned handle to an array. Helper for FFI definition.
 pub type LVArrayOwned<const D: usize, T> = OwnedUHandle<LVArray<D, T>>;
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -214,9 +211,10 @@ mod tests {
     fn test_dims_from_usize_out_of_range() {
         let dims = &[1usize, i32::MAX as usize + 1];
         let result: Result<LVArrayDims<2>, _> = dims.try_into();
-        assert!(matches!(
-            result,
-            Err(LVInteropError::ArrayDimensionsOutOfRange)
+
+        let _expected_err: Result<LVArrayDims<2>, _> = Err(LVInteropError::from(
+            InternalError::ArrayDimensionsOutOfRange,
         ));
+        assert!(matches!(result, _expected_err));
     }
 }

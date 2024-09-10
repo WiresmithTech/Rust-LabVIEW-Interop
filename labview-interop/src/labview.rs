@@ -8,7 +8,7 @@ use ctor::ctor;
 use dlopen2::wrapper::{Container, WrapperApi};
 
 use crate::{
-    errors::{LVInteropError, MgErr, Result},
+    errors::{InternalError, LVStatusCode, Result},
     memory::MagicCookie,
 };
 
@@ -26,14 +26,16 @@ pub(crate) type UPtrValue = usize;
 static SYNC_API: Option<Container<SyncApi>> = unsafe { Container::load_self().ok() };
 
 pub fn sync_api() -> Result<&'static Container<SyncApi>> {
-    SYNC_API.as_ref().ok_or(LVInteropError::NoLabviewApi)
+    SYNC_API.as_ref().ok_or(InternalError::NoLabviewApi.into())
 }
 
 #[ctor]
 static MEMORY_API: Option<Container<MemoryApi>> = unsafe { Container::load_self().ok() };
 
 pub fn memory_api() -> Result<&'static Container<MemoryApi>> {
-    MEMORY_API.as_ref().ok_or(LVInteropError::NoLabviewApi)
+    MEMORY_API
+        .as_ref()
+        .ok_or(InternalError::NoLabviewApi.into())
 }
 
 /// The LabVIEW synchronisation features are part of the Support Manager API.
@@ -52,7 +54,8 @@ pub struct SyncApi {
     ///
     /// Returns `MgErr`: `NoErr` or `mgArgErr` (corresponds to gen. err. code 1: not a valid user event)
     #[dlopen2_name = "PostLVUserEvent"]
-    post_lv_user_event: unsafe extern "C" fn(reference: MagicCookie, data: *mut c_void) -> MgErr,
+    post_lv_user_event:
+        unsafe extern "C" fn(reference: MagicCookie, data: *mut c_void) -> LVStatusCode,
 
     /// Triggers the specified occurrence. All block diagrams that are waiting for this occurrence stop waiting.
     ///
@@ -64,7 +67,7 @@ pub struct SyncApi {
     ///
     ///  Returns `MgErr`: `NoErr` or `mgArgErr` (corresponds to gen. err. code 1: not a valid user event)
     #[dlopen2_name = "Occur"]
-    occur: unsafe extern "C" fn(occurance: MagicCookie) -> MgErr,
+    occur: unsafe extern "C" fn(occurance: MagicCookie) -> LVStatusCode,
 }
 
 /// The [official documentation](https://www.ni.com/docs/en-US/bundle/labview-api-ref/page/properties-and-methods/lv-manager/memory-manager-functions.html) for the LabVIEW Memory Manager can be found (last verified 2024-jul-09) on the webpage of National Instruments.
@@ -78,7 +81,7 @@ pub struct MemoryApi {
     ///
     /// Returns `MgErr`: `noErr` or `mZoneErr`
     #[dlopen2_name = "DSCheckHandle"]
-    check_handle: unsafe extern "C" fn(handle: UHandleValue) -> MgErr,
+    check_handle: unsafe extern "C" fn(handle: UHandleValue) -> LVStatusCode,
 
     /// Verifies that the specified pointer is allocated with XX NewPtr or XX NewPClr. If it is not a pointer, this function returns mZoneErr.
     ///
@@ -89,7 +92,7 @@ pub struct MemoryApi {
     ///
     /// Returns `MgErr`: `noErr` or `mZoneErr`
     #[dlopen2_name = "DSCheckPtr"]
-    check_ptr: unsafe extern "C" fn(ptr: UPtrValue) -> MgErr,
+    check_ptr: unsafe extern "C" fn(ptr: UPtrValue) -> LVStatusCode,
 
     /// Creates a new handle to a relocatable block of memory of the specified size.
     ///
@@ -123,7 +126,7 @@ pub struct MemoryApi {
     /// - ... if the memory the handle points too, is too small to receive hsrc? --> Test?
     /// - ... if the memory contains another handle? Is it a deep copy, or a shallow copy? Guess: Shallow Copy,  --> Test?
     #[dlopen2_name = "DSCopyHandle"]
-    copy_handle: unsafe extern "C" fn(ph: *mut UHandleValue, hsrc: UHandleValue) -> MgErr,
+    copy_handle: unsafe extern "C" fn(ph: *mut UHandleValue, hsrc: UHandleValue) -> LVStatusCode,
 
     /// Releases the memory referenced by the specified handle.
     ///
@@ -135,7 +138,7 @@ pub struct MemoryApi {
     ///
     /// Returns `MgErr`: `NoErr` or `mZoneErr`
     #[dlopen2_name = "DSDisposeHandle"]
-    dispose_handle: unsafe extern "C" fn(handle: UHandleValue) -> MgErr,
+    dispose_handle: unsafe extern "C" fn(handle: UHandleValue) -> LVStatusCode,
 
     /// Changes the size of the block of memory referenced by the specified handle.
     ///
@@ -154,7 +157,22 @@ pub struct MemoryApi {
     ///
     ///   Returns `MgErr`: `noErr`, `mZoneErr`, `mFullErr` (corresponds to gen. err. code 2))
     #[dlopen2_name = "DSSetHandleSize"]
-    set_handle_size: unsafe extern "C" fn(handle: UHandleValue, size: usize) -> MgErr,
+    set_handle_size: unsafe extern "C" fn(handle: UHandleValue, size: usize) -> LVStatusCode,
+
+    /// Converts a numeric error code to the associated text description. This function recognizes error codes from any installed National Instruments product.
+    ///
+    /// ```C
+    /// LVBoolean NIGetOneErrorCode(int32 errCode, LStrHandle *errText);
+    /// ```
+    ///
+    /// - `errCode`: `int32`, Numeric error code
+    /// - `*errText`: `LStrHandle*`, Output: Address at which `NIGetOneErrorCode` stores the error code description. This parameter is a pointer.
+    ///
+    /// Returns `LVBoolean`: false -> This function did not find the value of errCode in any of the error text files.
+    ///                      true -> This function found the value of errCode in one of the error text files.
+    #[dlopen2_name = "NIGetOneErrorCode"]
+    error_code_description:
+        unsafe extern "C" fn(error_code: i32, error_text: *mut UHandleValue) -> bool,
 
     /// Resizes a data handle that refers to a numeric array. This routine also accounts for alignment issues. It does not set the array dimension field. If *dataHP is NULL, LabVIEW allocates a new array handle in *dataHP.
     ///
@@ -194,5 +212,5 @@ pub struct MemoryApi {
         number_of_dims: i32,
         handle_ptr: *mut UHandleValue,
         total_new_size: usize,
-    ) -> MgErr,
+    ) -> LVStatusCode,
 }

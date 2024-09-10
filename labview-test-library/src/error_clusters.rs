@@ -1,4 +1,4 @@
-use labview_interop::errors::MgErr;
+use labview_interop::errors::LVStatusCode;
 /// A simple type for testing the error integration.
 ///
 use labview_interop::types::{ErrorClusterPtr, ToLvError};
@@ -17,7 +17,7 @@ impl ToLvError for ErrorText {
 
 #[cfg(target_pointer_width = "64")]
 #[no_mangle]
-pub extern "C" fn set_error_cluster(error_cluster: ErrorClusterPtr) -> MgErr {
+pub extern "C" fn set_error_cluster(error_cluster: ErrorClusterPtr) -> LVStatusCode {
     let error = ErrorText("This is a test");
     error.write_error(error_cluster).into()
 }

@@ -4,8 +4,7 @@ use super::{LVArrayDims, LVArrayHandle, LVArrayOwned};
 use crate::errors::Result;
 use crate::memory::OwnedUHandle;
 
-
-impl <const D: usize, T: NumericArrayResizable + Sized + Copy> LVArrayOwned<D, T> {
+impl<const D: usize, T: NumericArrayResizable + Sized + Copy> LVArrayOwned<D, T> {
     /// Create a new empty owned array. Once created you can use
     /// the existing handle methods to manipulate the data.
     ///
@@ -92,7 +91,7 @@ impl<'array, const D: usize, T: NumericArrayResizable> LVArrayHandle<'array, D, 
                 new_size,
             )
         };
-        let result = mg_err.to_result(());
+        let result = mg_err.to_specific_result(());
 
         if result.is_ok() {
             self.dim_sizes = new_dims;

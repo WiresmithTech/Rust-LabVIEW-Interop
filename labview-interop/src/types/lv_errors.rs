@@ -4,8 +4,7 @@
 //! on unaligned pointer access.
 use std::borrow::Cow;
 
-use crate::errors::LVInteropError;
-use crate::errors::MgErr;
+use crate::errors::{LVInteropError, LVStatusCode, MgError, Result};
 use crate::labview_layout;
 use crate::memory::UPtr;
 use crate::types::LStrHandle;
@@ -15,7 +14,7 @@ labview_layout!(
     /// The cluster format used by LabVIEW for transmitting errors.
     pub struct ErrorCluster<'a> {
         status: LVBool,
-        code: MgErr,
+        code: LVStatusCode,
         source: LStrHandle<'a>,
     }
 );
@@ -42,7 +41,7 @@ impl<'a> ErrorCluster<'a> {
     }
 
     /// Set a description and source in the format that LabVIEW will interpret for display.
-    fn set_source(&mut self, source: &str, description: &str) -> Result<(), LVInteropError> {
+    fn set_source(&mut self, source: &str, description: &str) -> Result<()> {
         // Probably a clever way to avoid this allocation but for now we will take it.
         let full_source = Self::format_error_source(source, description);
         self.source.set_str(&full_source)
@@ -51,22 +50,17 @@ impl<'a> ErrorCluster<'a> {
     /// Set the error cluster to a warning state.
     pub fn set_warning(
         &mut self,
-        code: MgErr,
+        code: LVStatusCode,
         source: &str,
         description: &str,
-    ) -> Result<(), LVInteropError> {
+    ) -> Result<()> {
         self.code = code;
         self.status = super::boolean::LV_FALSE;
         self.set_source(source, description)
     }
 
     /// Set the error cluster to an error state.
-    pub fn set_error(
-        &mut self,
-        code: MgErr,
-        source: &str,
-        description: &str,
-    ) -> Result<(), LVInteropError> {
+    pub fn set_error(&mut self, code: LVStatusCode, source: &str, description: &str) -> Result<()> {
         self.code = code;
         self.status = super::boolean::LV_TRUE;
         self.set_source(source, description)
@@ -77,8 +71,8 @@ impl<'a> ErrorCluster<'a> {
 /// error cluster with `ToLvError::write_error`.
 pub trait ToLvError {
     /// The code for the error. Default is 42.
-    fn code(&self) -> MgErr {
-        42.into()
+    fn code(&self) -> LVStatusCode {
+        MgError::BogusError.into() // code 42, Generic Error
     }
 
     /// True if is error. Default is true.
@@ -101,7 +95,7 @@ pub trait ToLvError {
     ///
     /// This requires the `link` feature to enable string manipulation.
     #[cfg(feature = "link")]
-    fn write_error(&self, error_cluster: ErrorClusterPtr) -> Result<(), LVInteropError> {
+    fn write_error(&self, error_cluster: ErrorClusterPtr) -> Result<()> {
         let cluster = unsafe { error_cluster.as_ref_mut()? };
         let code = self.code();
         let source = self.source();
