@@ -1,0 +1,52 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: [ windows-latest ]
+            target: x86_64-pc-windows-msvc
+          - os: [ windows-latest ]
+            target: i586-pc-windows-msvc
+          - os: [ ubuntu-latest ]
+            target: x86_64-unknown-linux-gnu
+
+    runs-on: ${{ matrix.os }}
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.target }}
+          cache: false
+      - name: Install Just
+        run: cargo install just
+      - name: Run Unit Tests
+        run: just unit-tests
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: [ windows-latest ]
+            target: x86_64-pc-windows-msvc
+          - os: [ windows-latest ]
+            target: i586-pc-windows-msvc
+          - os: [ ubuntu-latest ]
+            target: x86_64-unknown-linux-gnu
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.target }}
+          cache: false
+          components: rustfmt,clippy
+      - name: Install Just
+        run: cargo install just
+      - name: Run Lints
+        run: just validate
