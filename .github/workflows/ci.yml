@@ -15,8 +15,8 @@ jobs:
             target: i586-pc-windows-msvc
           - os: [ ubuntu-latest ]
             target: x86_64-unknown-linux-gnu
-
     runs-on: ${{ matrix.os }}
+    steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
