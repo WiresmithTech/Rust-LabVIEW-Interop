@@ -1,4 +1,3 @@
-use super::LVCopy;
 use crate::errors::InternalError;
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -135,107 +134,110 @@ impl<'a, T: Debug + ?Sized> Debug for UHandle<'a, T> {
 }
 
 #[cfg(feature = "link")]
-impl<'a, T: ?Sized> UHandle<'a, T> {
-    /// Resize the handle to the desired size.
-    ///
-    /// # Safety
-    ///
-    /// * The handle must be valid.
-    pub unsafe fn resize(&mut self, desired_size: usize) -> crate::errors::Result<()> {
-        let err = crate::labview::memory_api()?.set_handle_size(self.0 as usize, desired_size);
-        err.to_specific_result(())
-    }
-}
-
-#[cfg(feature = "link")]
-impl<'a, T: ?Sized + LVCopy + 'static> UHandle<'a, T> {
-    /// Copy the contents of one handle into another.
-    ///
-    /// If other points to a null value then this will allocate a handle for the contents.
-    ///
-    /// The data in the handle must be `'static` or copy as this will only perform a shallow copy.
-    ///
-    /// # Safety
-    ///
-    /// * If the other pointer is invalid this may cause UB.
-    /// * If the other pointer points to null, you must wrap the value as an owned handle otherwise it will leak memory.
-    ///
-    /// # Examples
-    ///
-    /// ## Allowed Types
-    /// ```no_run
-    /// use labview_interop::labview_layout;
-    /// use labview_interop::memory::{UHandle, OwnedUHandle};
-    /// use labview_interop::types::LStrHandle;
-    ///
-    /// labview_layout! {
-    ///   #[derive(Copy, Clone)]
-    ///   struct ClusterWithNumbers {
-    ///     float: f64,
-    ///     int: i32
-    ///   }
-    /// }
-    ///
-    /// fn copy_handles(input: UHandle<ClusterWithNumbers>) {
-    ///   let cluster = ClusterWithNumbers { float: 3.14, int: 42 };
-    ///   let mut new_owned = OwnedUHandle::new(&cluster).unwrap();
-    ///   unsafe {
-    ///     let mut target_handle = new_owned.handle_to_inner();
-    ///     input.clone_into_pointer(&mut target_handle).unwrap();
-    ///   }
-    /// }
-    /// ```
-    ///
-    /// ## Lifetime Guarantees - Fails with Sub-Handles
-    /// ```compile_fail,E0521
-    /// use labview_interop::labview_layout;
-    /// use labview_interop::memory::{UHandle, LvOwned};
-    /// use labview_interop::types::LStrHandle;
-    ///
-    /// labview_layout! {
-    ///   struct ClusterWithString<'a> {
-    ///     string_handle: LStrHandle<'a>,
-    ///     int: i32
-    ///   }
-    /// }
-    ///
-    /// fn copy_handles(input: UHandle<ClusterWithString>) {
-    ///   let mut new_owned = LvOwned::<ClusterWithString>::new().unwrap();
-    ///   unsafe {
-    ///     let mut target_handle = new_owned.handle_to_inner();
-    ///     input.clone_into_pointer(&mut target_handle).unwrap();
-    ///   }
-    /// }
-    /// ```
-    /// ## Lifetime Guarantees - Fails with Owned Handle
-    /// ```compile_fail
-    /// use labview_interop::labview_layout;
-    /// use labview_interop::memory::{UHandle, LvOwned};
-    /// use labview_interop::types::LStrOwned;
-    ///
-    /// labview_layout! {
-    ///   struct ClusterWithString {
-    ///     string_handle: LStrOwned,
-    ///     int: i32
-    ///   }
-    /// }
-    ///
-    /// fn copy_handles(input: UHandle<ClusterWithString>, mut output: UHandle<ClusterWithString>) {
-    ///   unsafe {
-    ///     input.clone_into_pointer(&mut output).unwrap();
-    ///   }
-    /// }
-    /// ```
-    pub unsafe fn clone_into_pointer(
-        &self,
-        other: *mut UHandle<'_, T>,
-    ) -> crate::errors::Result<()> {
-        // Validate this handle first to improve safety.
-        if !self.valid() {
-            return Err(InternalError::InvalidHandle.into());
+mod uhandle_link_features {
+    use super::*;
+    use crate::memory::LVCopy;
+    impl<'a, T: ?Sized> UHandle<'a, T> {
+        /// Resize the handle to the desired size.
+        ///
+        /// # Safety
+        ///
+        /// * The handle must be valid.
+        pub unsafe fn resize(&mut self, desired_size: usize) -> crate::errors::Result<()> {
+            let err = crate::labview::memory_api()?.set_handle_size(self.0 as usize, desired_size);
+            err.to_specific_result(())
         }
-        let error = crate::labview::memory_api()?.copy_handle(other as *mut usize, self.0 as usize);
-        error.to_specific_result(())
+    }
+
+    impl<'a, T: ?Sized + LVCopy + 'static> UHandle<'a, T> {
+        /// Copy the contents of one handle into another.
+        ///
+        /// If other points to a null value then this will allocate a handle for the contents.
+        ///
+        /// The data in the handle must be `'static` or copy as this will only perform a shallow copy.
+        ///
+        /// # Safety
+        ///
+        /// * If the other pointer is invalid this may cause UB.
+        /// * If the other pointer points to null, you must wrap the value as an owned handle otherwise it will leak memory.
+        ///
+        /// # Examples
+        ///
+        /// ## Allowed Types
+        /// ```no_run
+        /// use labview_interop::labview_layout;
+        /// use labview_interop::memory::{UHandle, OwnedUHandle};
+        /// use labview_interop::types::LStrHandle;
+        ///
+        /// labview_layout! {
+        ///   #[derive(Copy, Clone)]
+        ///   struct ClusterWithNumbers {
+        ///     float: f64,
+        ///     int: i32
+        ///   }
+        /// }
+        ///
+        /// fn copy_handles(input: UHandle<ClusterWithNumbers>) {
+        ///   let cluster = ClusterWithNumbers { float: 3.14, int: 42 };
+        ///   let mut new_owned = OwnedUHandle::new(&cluster).unwrap();
+        ///   unsafe {
+        ///     let mut target_handle = new_owned.handle_to_inner();
+        ///     input.clone_into_pointer(&mut target_handle).unwrap();
+        ///   }
+        /// }
+        /// ```
+        ///
+        /// ## Lifetime Guarantees - Fails with Sub-Handles
+        /// ```compile_fail,E0521
+        /// use labview_interop::labview_layout;
+        /// use labview_interop::memory::{UHandle, LvOwned};
+        /// use labview_interop::types::LStrHandle;
+        ///
+        /// labview_layout! {
+        ///   struct ClusterWithString<'a> {
+        ///     string_handle: LStrHandle<'a>,
+        ///     int: i32
+        ///   }
+        /// }
+        ///
+        /// fn copy_handles(input: UHandle<ClusterWithString>) {
+        ///   let mut new_owned = LvOwned::<ClusterWithString>::new().unwrap();
+        ///   unsafe {
+        ///     let mut target_handle = new_owned.handle_to_inner();
+        ///     input.clone_into_pointer(&mut target_handle).unwrap();
+        ///   }
+        /// }
+        /// ```
+        /// ## Lifetime Guarantees - Fails with Owned Handle
+        /// ```compile_fail
+        /// use labview_interop::labview_layout;
+        /// use labview_interop::memory::{UHandle, LvOwned};
+        /// use labview_interop::types::LStrOwned;
+        ///
+        /// labview_layout! {
+        ///   struct ClusterWithString {
+        ///     string_handle: LStrOwned,
+        ///     int: i32
+        ///   }
+        /// }
+        ///
+        /// fn copy_handles(input: UHandle<ClusterWithString>, mut output: UHandle<ClusterWithString>) {
+        ///   unsafe {
+        ///     input.clone_into_pointer(&mut output).unwrap();
+        ///   }
+        /// }
+        /// ```
+        pub unsafe fn clone_into_pointer(
+            &self,
+            other: *mut UHandle<'_, T>,
+        ) -> crate::errors::Result<()> {
+            // Validate this handle first to improve safety.
+            if !self.valid() {
+                return Err(InternalError::InvalidHandle.into());
+            }
+            let error = crate::labview::memory_api()?.copy_handle(other as *mut usize, self.0 as usize);
+            error.to_specific_result(())
+        }
     }
 }
 

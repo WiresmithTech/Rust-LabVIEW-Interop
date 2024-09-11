@@ -4,12 +4,8 @@
 //! which is why it is given its own type.
 
 use crate::errors::{LVInteropError, MgError};
-use crate::labview;
-use crate::types::LStrHandle;
-use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::Display;
-use std::mem::MaybeUninit;
 
 /// ´LVStatusCode´ is a transparent newtype on i32 to represent all potential error codes and SUCCESS (0) as a success value.
 ///
@@ -81,25 +77,33 @@ impl From<LVStatusCode> for i32 {
 }
 
 #[cfg(feature = "link")]
-impl LVStatusCode {
-    pub fn description(&self) -> Cow<'static, str> {
-        static DEFAULT_STRING: &str = "LabVIEW-Interop: Description not retrievable";
-        let mut error_text_ptr = MaybeUninit::<LStrHandle>::uninit();
+mod lv_status_link_features {
+    use super::*;
+    use std::borrow::Cow;
+    impl LVStatusCode {
+        pub fn description(&self) -> Cow<'static, str> {
+            use crate::labview::memory_api;
+            use std::mem::MaybeUninit;
+            use crate::types::LStrHandle;
 
-        let memory_api = match labview::memory_api() {
-            Ok(api) => api,
-            Err(_) => return Cow::Borrowed(DEFAULT_STRING),
-        };
+            static DEFAULT_STRING: &str = "LabVIEW-Interop: Description not retrievable";
+            let mut error_text_ptr = MaybeUninit::<LStrHandle>::uninit();
 
-        unsafe {
-            if memory_api.error_code_description(self.0, error_text_ptr.as_mut_ptr() as *mut usize)
-            {
-                let error_text_ptr = error_text_ptr.assume_init();
-                let desc = error_text_ptr.to_rust_string().to_string();
-                return Cow::Owned(desc);
+            let memory_api = match memory_api() {
+                Ok(api) => api,
+                Err(_) => return Cow::Borrowed(DEFAULT_STRING),
+            };
+
+            unsafe {
+                if memory_api.error_code_description(self.0, error_text_ptr.as_mut_ptr() as *mut usize)
+                {
+                    let error_text_ptr = error_text_ptr.assume_init();
+                    let desc = error_text_ptr.to_rust_string().to_string();
+                    return Cow::Owned(desc);
+                }
             }
+            Cow::Borrowed(DEFAULT_STRING)
         }
-        Cow::Borrowed(DEFAULT_STRING)
     }
 }
 

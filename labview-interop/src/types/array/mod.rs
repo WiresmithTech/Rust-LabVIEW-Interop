@@ -8,7 +8,9 @@ mod ndarray;
 mod dimensions;
 
 use crate::labview_layout;
-use crate::memory::{LVCopy, OwnedUHandle, UHandle};
+use crate::memory::{LVCopy, UHandle};
+#[cfg(feature = "link")]
+use crate::memory::OwnedUHandle;
 pub use dimensions::LVArrayDims;
 
 
@@ -77,7 +79,7 @@ impl<const D: usize, T> LVArray<D, T> {
         let element_ptr = data_ptr.add(index);
         std::ptr::read_unaligned(element_ptr)
 
-        //self.data[index]
+        //self.data[index]`
     }
 
     /// Set the value at the index. This is an unsafe method used on 32 bit targets
@@ -126,6 +128,7 @@ impl<const D: usize, T> LVArray<D, T> {
 pub type LVArrayHandle<'a, const D: usize, T> = UHandle<'a, LVArray<D, T>>;
 
 /// Definition of an owned handle to an array. Helper for FFI definition.
+#[cfg(feature = "link")]
 pub type LVArrayOwned<const D: usize, T> = OwnedUHandle<LVArray<D, T>>;
 
 

@@ -4,12 +4,14 @@
 //! on unaligned pointer access.
 use std::borrow::Cow;
 
-use crate::errors::{LVInteropError, MgError, Result};
+use crate::errors::{LVInteropError, MgError};
 use crate::types::LVStatusCode;
 use crate::labview_layout;
 use crate::memory::UPtr;
 use crate::types::LStrHandle;
 use crate::types::LVBool;
+#[cfg(feature = "link")]
+use crate::errors::Result;
 
 labview_layout!(
     /// The cluster format used by LabVIEW for transmitting errors.
@@ -32,6 +34,11 @@ labview_layout!(
 pub type ErrorClusterPtr<'a> = UPtr<ErrorCluster<'a>>;
 
 #[cfg(feature = "link")]
+mod error_cluster_link_features {
+    use super::*;
+    use crate::errors::Result;
+    use crate::types::boolean::{LV_FALSE, LV_TRUE};
+
 impl<'a> ErrorCluster<'a> {
     fn format_error_source(source: &str, description: &str) -> String {
         match (source, description) {
@@ -56,15 +63,42 @@ impl<'a> ErrorCluster<'a> {
         description: &str,
     ) -> Result<()> {
         self.code = code;
-        self.status = super::boolean::LV_FALSE;
+        self.status = LV_FALSE;
         self.set_source(source, description)
     }
 
     /// Set the error cluster to an error state.
     pub fn set_error(&mut self, code: LVStatusCode, source: &str, description: &str) -> Result<()> {
         self.code = code;
-        self.status = super::boolean::LV_TRUE;
+        self.status = LV_TRUE;
         self.set_source(source, description)
+    }
+}
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        use super::*;
+
+        #[test]
+        fn test_source_writer_empty_description() {
+            let source = ErrorCluster::format_error_source("Rust", "");
+            assert_eq!(source, "Rust");
+        }
+
+        #[test]
+        fn test_source_writer_with_description() {
+            let source = ErrorCluster::format_error_source("Rust", "An Error Occured");
+            let expected = "Rust\n<ERR>\nAn Error Occured";
+            assert_eq!(source, expected)
+        }
+
+        #[test]
+        fn test_source_writer_empty_source() {
+            let source = ErrorCluster::format_error_source("", "An Error Occured");
+            let expected = "<ERR>\nAn Error Occured";
+            assert_eq!(source, expected)
+        }
     }
 }
 
@@ -120,25 +154,5 @@ impl ToLvError for LVInteropError {
 #[cfg(test)]
 mod tests {
 
-    use super::*;
 
-    #[test]
-    fn test_source_writer_empty_description() {
-        let source = ErrorCluster::format_error_source("Rust", "");
-        assert_eq!(source, "Rust");
-    }
-
-    #[test]
-    fn test_source_writer_with_description() {
-        let source = ErrorCluster::format_error_source("Rust", "An Error Occured");
-        let expected = "Rust\n<ERR>\nAn Error Occured";
-        assert_eq!(source, expected)
-    }
-
-    #[test]
-    fn test_source_writer_empty_source() {
-        let source = ErrorCluster::format_error_source("", "An Error Occured");
-        let expected = "<ERR>\nAn Error Occured";
-        assert_eq!(source, expected)
-    }
 }
