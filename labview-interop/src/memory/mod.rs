@@ -4,8 +4,8 @@
 //! todo: get to reference without panics.
 #[cfg(feature = "link")]
 mod owned_handle;
-mod uptr;
 mod uhandle;
+mod uptr;
 
 use std::fmt::Debug;
 
@@ -25,13 +25,17 @@ impl<T: Copy> LVCopy for T {}
 #[doc(hidden)]
 pub struct MagicCookie(u32);
 
-pub use uptr::UPtr;
-pub use uhandle::UHandle;
 #[cfg(feature = "link")]
 pub use owned_handle::OwnedUHandle;
+pub use uhandle::UHandle;
+pub use uptr::UPtr;
 
 /// Extracted formatting logic which can be used for handles or owned values.
-fn fmt_handle<T: Debug + ?Sized>(label: &str, handle: &UHandle<T>, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+fn fmt_handle<T: Debug + ?Sized>(
+    label: &str,
+    handle: &UHandle<T>,
+    f: &mut std::fmt::Formatter<'_>,
+) -> std::fmt::Result {
     match unsafe { handle.as_ref() } {
         Ok(inner) => write!(f, "{label}({inner:?})"),
         Err(_) => write!(f, "{label}(Invalid)"),

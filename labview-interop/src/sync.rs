@@ -22,7 +22,7 @@ type LVUserEventRef = MagicCookie;
 /// # Example
 /// ```
 /// # use labview_interop::sync::LVUserEvent;
-/// # use labview_interop::errors::LVStatusCode;
+/// # use labview_interop::types::LVStatusCode;
 ///#[no_mangle]
 ///pub extern "C" fn generate_event_3(lv_user_event: *mut LVUserEvent<i32>) -> LVStatusCode {
 ///    let event = unsafe { *lv_user_event };
@@ -61,7 +61,7 @@ impl<T> LVUserEvent<T> {
 /// # Example
 /// ```
 /// # use labview_interop::sync::Occurence;
-/// # use labview_interop::errors::LVStatusCode;
+/// # use labview_interop::types::LVStatusCode;
 /// #[no_mangle]
 ///pub extern "C" fn generate_occurence(occurence: *mut Occurence) -> LVStatusCode {
 ///    let result = unsafe { (*occurence).set() };

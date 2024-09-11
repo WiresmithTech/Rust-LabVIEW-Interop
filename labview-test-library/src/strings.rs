@@ -3,7 +3,7 @@
 use std::ffi::{c_char, CStr};
 
 use labview_interop::{
-    errors::LVStatusCode,
+    types::LVStatusCode,
     types::string::{LStrHandle, LStrOwned},
 };
 #[no_mangle]

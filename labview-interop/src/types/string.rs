@@ -108,8 +108,7 @@ impl LStr {
     ///
     /// # Example
     /// ```
-    /// use labview_interop::types::LStrHandle;
-    /// use labview_interop::errors::LVStatusCode;
+    /// use labview_interop::types::{LVStatusCode, LStrHandle};
     /// #[no_mangle]
     /// pub extern "C" fn string_check(mut string: LStrHandle) -> LVStatusCode {
     ///    let string_value = string.to_string();
@@ -156,8 +155,7 @@ impl<'a> LStrHandle<'a> {
     ///
     /// # Example
     /// ```
-    /// use labview_interop::types::LStrHandle;
-    /// use labview_interop::errors::LVStatusCode;
+    /// use labview_interop::types::{LVStatusCode, LStrHandle};
     /// #[no_mangle]
     /// pub extern "C" fn hello_world(mut string: LStrHandle) -> LVStatusCode {
     ///    let result = string.set(b"Hello World");
@@ -223,7 +221,7 @@ impl LStrOwned {
     /// # Example
     /// ```
     /// use labview_interop::types::{LStrHandle, LStrOwned};
-    /// use labview_interop::errors::LVStatusCode;
+    /// use labview_interop::types::LVStatusCode;
     /// #[no_mangle]
     /// pub extern "C" fn hello_world(mut strn: String, output_string: *mut LStrHandle) {
     ///    let handle = LStrOwned::from_data(strn.as_bytes()).unwrap();

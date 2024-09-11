@@ -36,8 +36,7 @@ pub extern "C" fn extract_test_struct_with_waveform(
 
     if result.is_err() {
         -1
-    }
-    else {
+    } else {
         0
     }
 }

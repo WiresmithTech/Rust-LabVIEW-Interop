@@ -8,7 +8,8 @@ use ctor::ctor;
 use dlopen2::wrapper::{Container, WrapperApi};
 
 use crate::{
-    errors::{InternalError, LVStatusCode, Result},
+    errors::{InternalError,  Result},
+    types::LVStatusCode,
     memory::MagicCookie,
 };
 

@@ -5,6 +5,7 @@ pub mod array;
 mod boolean;
 #[cfg(target_pointer_width = "64")]
 mod lv_errors;
+mod lv_status;
 pub mod string;
 pub mod timestamp;
 
@@ -17,6 +18,7 @@ pub use array::{LVArray, LVArrayHandle, LVArrayOwned};
 pub use boolean::LVBool;
 #[cfg(target_pointer_width = "64")]
 pub use lv_errors::{ErrorClusterPtr, ToLvError};
+pub use lv_status::LVStatusCode;
 pub use string::LStrHandle;
 #[cfg(feature = "link")]
 pub use string::LStrOwned;

@@ -93,7 +93,7 @@ impl<'a, T: ?Sized> UHandle<'a, T> {
                     .unwrap()
                     .check_handle(self.0 as usize)
             };
-            ret == crate::errors::LVStatusCode::SUCCESS
+            ret == crate::types::LVStatusCode::SUCCESS
         }
         #[cfg(not(feature = "link"))]
         {

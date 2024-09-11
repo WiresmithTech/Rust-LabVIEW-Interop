@@ -207,11 +207,8 @@ mod chrono_tests {
         let date_time: DateTime<Utc> = LVTime::from_lv_epoch(3758974472.02440977f64)
             .try_into()
             .unwrap();
-        let expected = DateTime::from_timestamp(
-            3758974472 - UNIX_EPOCH_IN_LV_SECONDS_I64,
-            024409770,
-        )
-        .unwrap();
+        let expected =
+            DateTime::from_timestamp(3758974472 - UNIX_EPOCH_IN_LV_SECONDS_I64, 024409770).unwrap();
         assert_eq!(date_time, expected);
     }
 

@@ -4,10 +4,9 @@
 
 use labview_interop::errors::LVInteropError;
 use labview_interop::types::array::LVArrayOwned;
-use labview_interop::{
-    errors::LVStatusCode,
-    types::{LVArrayHandle, LVBool},
-};
+use labview_interop::
+    types::{LVArrayHandle, LVBool, LVStatusCode}
+;
 
 #[no_mangle]
 pub extern "C" fn extract_from_array(

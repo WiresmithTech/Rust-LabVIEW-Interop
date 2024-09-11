@@ -1,5 +1,5 @@
 use labview_interop::{
-    errors::LVStatusCode,
+    types::LVStatusCode,
     labview_layout,
     memory::UPtr,
     sync::{LVUserEvent, Occurence},

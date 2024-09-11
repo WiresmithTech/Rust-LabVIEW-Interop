@@ -9,7 +9,7 @@
 //!    gives a full list of possible error values.
 //!
 //! 2. **MgErrorCode**: to LabVIEW through function return
-//!    We want to be able to return the errors genated internally through the function return and be
+//!    We want to be able to return the errors generated internally through the function return and be
 //!    understood on the LabVIEW side. This is straight forward for Errors of MgError type. But we will
 //!    have an internal compound Error type that can have a different type. When using status returns, these
 //!    can only be converted to a very generic error code. Therefore 3
@@ -24,7 +24,7 @@
 //!    warnings. TBD
 //!
 //! # Notes on Error Handling in LabVIEW
-//! This section is a sumary of defined and observed LabVIEW behaviour
+//! This section is a summary of defined and observed LabVIEW behaviour
 //!
 //! ## Labview error clusters and data types
 //! THe labview error clusters possess an error code of i32. The error lists on labviewwiki show
@@ -42,13 +42,8 @@
 //! internally and not handed down by c functions
 //!
 //! # Error Implementation
-//! There is a hierarcy of Status and Errors
+//! There is a hierarchy of Status and Errors
 //! - A status encode Success and Error
-//!
-//! These two are very generic and not bound to our crate:
-//! LVStatusCode - a simple i32 code that can be returned from any c function, no checks
-//! LVError - a generic i32 error that can get the official description through the memory manager
-//!           this is the basis for creating a LVErrorCluster
 //!
 //! The errors we expect to receive from calls to labview functions are
 //! MgErrorCode
@@ -59,92 +54,11 @@
 //! This enum has custom errors for our internal use, we can hold MgErrors, and as last resort we can also hold
 //! LVError
 
-use std::{borrow::Cow, error::Error, fmt::Display, mem::MaybeUninit};
 use thiserror::Error;
 
-use crate::labview;
-use crate::types::LStrHandle;
-use crate::types::{ErrorClusterPtr, ToLvError};
+use crate::types::LVStatusCode;
 
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-
-/// ´LVStatusCode´ is a transparent newtype on i32 to represent all potential error codes and SUCCESS (0) as a success value.
-///
-/// This kind of status code corresponds to the Rust Result types.
-/// Therefore it is named status and not error on purpose. There is no checks or guarantees if the code is a valid range or has an official labview
-/// definition.
-///
-/// # Examples
-///
-/// ```
-/// use labview_interop::errors::LVStatusCode;
-/// let status = LVStatusCode::from(42);
-///
-/// assert_eq!(status, 42.into());
-/// ```
-#[repr(transparent)]
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub struct LVStatusCode(i32);
-
-impl LVStatusCode {
-    pub const SUCCESS: LVStatusCode = LVStatusCode(0);
-
-    ///this will convert the LVStatusCode to either Ok(T) or Err(LVInteropError(LabviewMgError)) or Err(LVInteropError)
-    ///mostly for our internal use
-    pub(crate) fn to_specific_result<T>(self, success_value: T) -> Result<T> {
-        if self == Self::SUCCESS {
-            Ok(success_value)
-        } else {
-            match MgError::try_from(self) {
-                Ok(mg_err) => Err(mg_err.into()),
-                Err(inter_err) => Err(inter_err),
-            }
-        }
-    }
-
-    /// this will convert the LVStatusCode to the generic LVError with no checks of validity
-    pub fn to_generic_result<T>(self, success_value: T) -> core::result::Result<T, LVError> {
-        if self == Self::SUCCESS {
-            Ok(success_value)
-        } else {
-            Err(LVError { code: self })
-        }
-    }
-}
-
-impl From<LVError> for LVStatusCode {
-    fn from(err: LVError) -> LVStatusCode {
-        err.code
-    }
-}
-
-impl<T> From<core::result::Result<T, LVError>> for LVStatusCode {
-    fn from(value: core::result::Result<T, LVError>) -> Self {
-        match value {
-            Ok(_) => LVStatusCode::SUCCESS,
-            Err(err) => err.into(),
-        }
-    }
-}
-
-// From<i32> vice versa implemented, but not Deref (do not want to inherit other math operations)
-impl From<i32> for LVStatusCode {
-    fn from(value: i32) -> LVStatusCode {
-        LVStatusCode(value)
-    }
-}
-
-impl From<LVStatusCode> for i32 {
-    fn from(code: LVStatusCode) -> i32 {
-        code.0
-    }
-}
-
-impl Display for LVStatusCode {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
 
 /// the conversion from LVInteropError back to LVStatusCode is important
 /// to return the status in extern "C" functions back to LV
@@ -158,70 +72,11 @@ impl<T> From<Result<T>> for LVStatusCode {
 }
 impl From<LVInteropError> for LVStatusCode {
     fn from(value: LVInteropError) -> Self {
-        let num = match value {
-            LVInteropError::LabviewMgError(e) => e as i32,
-            LVInteropError::InternalError(e) => e as i32, // TODO
-        };
-        num.into()
-    }
-}
-
-/// LVError is a generic Labview Error
-/// that can retrieve a error description if the link feature is enabled
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Error)]
-pub struct LVError {
-    code: LVStatusCode,
-}
-
-impl ToLvError for LVError {
-    fn source(&self) -> std::borrow::Cow<'_, str> {
-        "Rust".into()
-    }
-
-    fn code(&self) -> LVStatusCode {
-        self.code
-    }
-
-    #[cfg(feature = "link")]
-    fn description(&self) -> Cow<'static, str> {
-        static DEFAULT_STRING: &str = "LabVIEW-Interop: Description not retrievable";
-        let mut error_text_ptr = MaybeUninit::<LStrHandle>::uninit();
-
-        let memory_api = match labview::memory_api() {
-            Ok(api) => api,
-            Err(_) => return Cow::Borrowed(DEFAULT_STRING),
-        };
-
-        unsafe {
-            if memory_api
-                .error_code_description(self.code.0, error_text_ptr.as_mut_ptr() as *mut usize)
-            {
-                let error_text_ptr = error_text_ptr.assume_init();
-                let desc = error_text_ptr.to_rust_string().to_string();
-                return Cow::Owned(desc);
-            }
+        match value {
+            LVInteropError::LabviewMgError(e) => e.into(),
+            LVInteropError::InternalError(e) => e.into(), // TODO
+            LVInteropError::LabviewError(e) => e,
         }
-        Cow::Borrowed(DEFAULT_STRING)
-    }
-}
-
-impl From<LVStatusCode> for core::result::Result<(), LVError> {
-    fn from(code: LVStatusCode) -> Self {
-        match code {
-            LVStatusCode::SUCCESS => Ok(()),
-            _ => Err(LVError { code }),
-        }
-    }
-}
-
-impl Display for LVError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "{}: {}",
-            self.code,
-            <LVError as ToLvError>::description(self)
-        )
     }
 }
 
@@ -481,7 +336,7 @@ impl TryFrom<LVStatusCode> for MgError {
         if status == LVStatusCode::SUCCESS {
             return Err(InternalError::InvalidMgErrorCode.into());
         }
-        match MgError::try_from_primitive(status.0) {
+        match MgError::try_from_primitive(status.into()) {
             Ok(code) => Ok(code),
             Err(_) => Err(InternalError::InvalidMgErrorCode.into()),
         }
@@ -495,16 +350,11 @@ impl From<MgError> for LVStatusCode {
     }
 }
 
-impl From<MgError> for LVError {
-    fn from(mgerr: MgError) -> LVError {
-        LVError { code: mgerr.into() }
-    }
-}
-
 /// # Examples
 ///
 /// ```
-/// use labview_interop::errors::{LVStatusCode, MgError, LVInteropError};
+/// use labview_interop::errors::{MgError, LVInteropError};
+/// use labview_interop::types::LVStatusCode;
 /// use std::convert::TryFrom;
 ///
 /// let status = LVStatusCode::from(2);
@@ -548,44 +398,27 @@ pub enum InternalError {
     InvalidMgErrorCode = 542_006,
 }
 
+impl From<InternalError> for LVStatusCode {
+    fn from(err: InternalError) -> LVStatusCode {
+        let err_i32: i32 = err as i32;
+        err_i32.into()
+    }
+}
 #[derive(Error, Debug, Clone, Copy, PartialEq)]
 pub enum LVInteropError {
     #[error("Internal LabVIEW Manager Error: {0}")]
     LabviewMgError(#[from] MgError),
     #[error("Internal Error: {0}")]
     InternalError(#[from] InternalError),
+    #[error("LabVIEW Error: {0}")]
+    LabviewError(LVStatusCode),
 }
 
 pub type Result<T> = std::result::Result<T, LVInteropError>;
 
-/// In Order to use our internal LVInteropError in extern "C" function returns and for
-/// communicating the Error to LV as an Errorcluster we need to implement
-impl From<LVInteropError> for LVError {
-    fn from(interop: LVInteropError) -> LVError {
-        match interop {
-            LVInteropError::LabviewMgError(mgerr) => mgerr.into(),
-            _ => LVError {
-                code: interop.into(),
-            },
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_error_lvstatuscode_from_i32() {
-        let status = LVStatusCode::from(0);
-        assert_eq!(status, LVStatusCode::SUCCESS);
-
-        let status = LVStatusCode::from(1);
-        assert_eq!(status, LVStatusCode(1));
-
-        let status: LVStatusCode = 42.into();
-        assert_eq!(status, LVStatusCode(42));
-    }
 
     #[test]
     fn test_error_lvstatuscode_from_mgerror() {
@@ -598,14 +431,10 @@ mod tests {
     #[test]
     fn test_error_lvinteroperror_from_lvstatuscode() {
         let status = LVStatusCode::from(42);
-        let mut err: LVInteropError = InternalError::Misc.into();
-        if let Ok(mgerr) = MgError::try_from(status) {
-            err = LVInteropError::LabviewMgError(mgerr)
-        }
+        let mg_err = MgError::try_from(status).unwrap();
 
-        let st: LVStatusCode = 42.into();
-        err.code();
-        assert_eq!(st, status)
+        let expected_code: LVStatusCode = 42.into();
+        assert_eq!(expected_code, mg_err.into());
     }
 
     #[test]
@@ -626,25 +455,5 @@ mod tests {
         //let num: i32 = err.code().into();
         //assert_eq!(num, 42);
         //println!("{}", err);
-    }
-
-    // test transparency of status type
-    #[test]
-    fn test_error_lvstatuscode_from_externc() {
-        // Mock the external C function
-        unsafe extern "C" fn mock_externc() -> i32 {
-            542_002 // Simulate a C function returning an `i32`
-        }
-
-        fn post_lv_user_event_safe() -> LVStatusCode {
-            let result: i32 = unsafe { mock_externc() };
-
-            // Transmute the i32 result to LVStatusCode
-            unsafe { std::mem::transmute(result) }
-        }
-
-        let lv_status = post_lv_user_event_safe();
-
-        assert_eq!(lv_status, LVStatusCode(542_002));
     }
 }

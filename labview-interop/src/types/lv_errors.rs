@@ -4,7 +4,8 @@
 //! on unaligned pointer access.
 use std::borrow::Cow;
 
-use crate::errors::{LVInteropError, LVStatusCode, MgError, Result};
+use crate::errors::{LVInteropError, MgError, Result};
+use crate::types::LVStatusCode;
 use crate::labview_layout;
 use crate::memory::UPtr;
 use crate::types::LStrHandle;

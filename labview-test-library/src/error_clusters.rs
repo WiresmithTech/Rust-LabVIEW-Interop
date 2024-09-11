@@ -1,4 +1,4 @@
-use labview_interop::errors::LVStatusCode;
+use labview_interop::types::LVStatusCode;
 /// A simple type for testing the error integration.
 ///
 use labview_interop::types::{ErrorClusterPtr, ToLvError};
