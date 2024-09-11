@@ -20,7 +20,7 @@ impl<const D: usize, T: NumericArrayResizable + Sized + Copy> LVArrayOwned<D, T>
     pub fn new_empty() -> Result<Self> {
         unsafe {
             OwnedUHandle::new_unsized(|handle: &mut LVArrayHandle<D, T>| {
-                handle.resize_array(LVArrayDims([0; D]))?;
+                handle.resize_array(LVArrayDims::new_empty())?;
                 Ok(())
             })
         }

@@ -3,6 +3,7 @@
 ### Features
 
 * Added support for `LVStatusCode` and retrieving error descriptions from LabVIEW.
+* Added api for accessing dimensions of arrays.
 
 
 ## v0.3.0
