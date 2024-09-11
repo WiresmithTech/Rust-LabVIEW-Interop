@@ -15,6 +15,7 @@
 		<Property Name="specify.custom.address" Type="Bool">false</Property>
 		<Item Name="CString vs LStr Performance Comparison.vi" Type="VI" URL="../CString vs LStr Performance Comparison.vi"/>
 		<Item Name="Data Structure Tests.lvclass" Type="LVClass" URL="../Data Structure Tests/Data Structure Tests.lvclass"/>
+		<Item Name="Error Tests.lvclass" Type="LVClass" URL="../Error Tests/Error Tests.lvclass"/>
 		<Item Name="Memory Manager Tests.lvclass" Type="LVClass" URL="../Memory Manager Tests/Memory Manager Tests.lvclass"/>
 		<Item Name="String Tests.lvclass" Type="LVClass" URL="../String Tests/String Tests.lvclass"/>
 		<Item Name="Sync Tests.lvclass" Type="LVClass" URL="../Sync Tests/Sync Tests.lvclass"/>
@@ -315,6 +316,7 @@
 				<Item Name="Waveform Subtype Enum__ogtk__jki_vi_tester.ctl" Type="VI" URL="/&lt;vilib&gt;/addons/_JKI Toolkits/VI Tester/_support/Support.llb/Waveform Subtype Enum__ogtk__jki_vi_tester.ctl"/>
 			</Item>
 			<Item Name="Library Path.vi" Type="VI" URL="../Library Path.vi"/>
+			<Item Name="temp_VI_UnderTest.vi" Type="VI" URL="../Error Tests/temp_VI_UnderTest.vi"/>
 		</Item>
 		<Item Name="Build Specifications" Type="Build"/>
 	</Item>

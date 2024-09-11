@@ -1,3 +1,9 @@
+## v0.4.0
+
+### Features
+
+* Added support for `LVStatusCode` and retrieving error descriptions from LabVIEW.
+
 
 ## v0.3.0
 

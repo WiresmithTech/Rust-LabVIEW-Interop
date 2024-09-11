@@ -82,7 +82,7 @@ impl From<LVStatusCode> for i32 {
 
 #[cfg(feature = "link")]
 impl LVStatusCode {
-    fn description(&self) -> Cow<'static, str> {
+    pub fn description(&self) -> Cow<'static, str> {
         static DEFAULT_STRING: &str = "LabVIEW-Interop: Description not retrievable";
         let mut error_text_ptr = MaybeUninit::<LStrHandle>::uninit();
 
