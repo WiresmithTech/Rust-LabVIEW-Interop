@@ -11,3 +11,10 @@ Cargo.lock
 
 # From Rust Rover
 .idea
+
+# From VsCode
+.vscode
+.errorviz-version
+
+# From Macs
+**/.DS_Store
