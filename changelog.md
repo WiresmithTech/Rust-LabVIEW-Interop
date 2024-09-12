@@ -4,6 +4,7 @@
 
 * Added support for `LVStatusCode` and retrieving error descriptions from LabVIEW.
 * Added api for accessing dimensions of arrays.
+* Add API to error clusters to execute the rust code following the LabVIEW error semantics.
 
 #### Fixes
 

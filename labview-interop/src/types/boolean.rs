@@ -8,6 +8,10 @@
 ///
 /// You can use `.into()` to convert between this and
 /// rust [`bool`] types.
+///
+/// NOTE: This does not seem to work if the boolean is
+/// used as a parameter in a call library function node.
+/// In that case you should convert to numeric first.
 #[repr(transparent)]
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct LVBool(u8);
@@ -64,5 +68,20 @@ mod tests {
     fn test_any_non_zero_to_bool() {
         let value: bool = LVBool(23).into();
         assert_eq!(value, true)
+    }
+
+    #[test]
+    fn lv_bool_in_if_statement() {
+        if LV_TRUE.into() {
+            assert!(true);
+        } else {
+            assert!(false);
+        }
+
+        if LV_FALSE.into() {
+            assert!(false);
+        } else {
+            assert!(true);
+        }
     }
 }

@@ -1,3 +1,4 @@
+use labview_interop::errors::LVInteropError;
 /// A simple type for testing the error integration.
 ///
 use labview_interop::types::{ErrorClusterPtr, ToLvError};
@@ -17,9 +18,26 @@ impl ToLvError for ErrorText {
 
 #[cfg(target_pointer_width = "64")]
 #[no_mangle]
-pub extern "C" fn set_error_cluster(error_cluster: ErrorClusterPtr) -> LVStatusCode {
+pub extern "C" fn set_error_cluster(mut error_cluster: ErrorClusterPtr) -> LVStatusCode {
     let error = ErrorText("This is a test");
-    error.write_error(error_cluster).into()
+    error.write_error(&mut error_cluster).into()
+}
+
+/// Check scenarios for the error cluster function wrapping.
+#[cfg(target_pointer_width = "64")]
+#[no_mangle]
+pub extern "C" fn wrap_function(
+    mut error_cluster: ErrorClusterPtr,
+    mut text: LStrHandle,
+    inner_error: i16,
+) -> i32 {
+    error_cluster.wrap_function(42, || -> Result<i32, LVInteropError> {
+        text.set_str("Hello World")?;
+        if inner_error != 0 {
+            return Err(LVInteropError::from(LVStatusCode::from(1)));
+        }
+        Ok(0)
+    })
 }
 
 #[no_mangle]
