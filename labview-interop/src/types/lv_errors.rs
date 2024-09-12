@@ -33,6 +33,15 @@ labview_layout!(
 /// it can manipulate LabVIEW Strings.
 pub type ErrorClusterPtr<'a> = UPtr<ErrorCluster<'a>>;
 
+
+fn format_error_source(source: &str, description: &str) -> String {
+    match (source, description) {
+        ("", description) => format!("<ERR>\n{description}"),
+        (source, "") => source.to_string(),
+        (source, description) => format!("{source}\n<ERR>\n{description}"),
+    }
+}
+
 #[cfg(feature = "link")]
 mod error_cluster_link_features {
     use super::*;
@@ -40,18 +49,11 @@ mod error_cluster_link_features {
     use crate::types::boolean::{LV_FALSE, LV_TRUE};
 
     impl<'a> ErrorCluster<'a> {
-        fn format_error_source(source: &str, description: &str) -> String {
-            match (source, description) {
-                ("", description) => format!("<ERR>\n{description}"),
-                (source, "") => source.to_string(),
-                (source, description) => format!("{source}\n<ERR>\n{description}"),
-            }
-        }
 
         /// Set a description and source in the format that LabVIEW will interpret for display.
         fn set_source(&mut self, source: &str, description: &str) -> Result<()> {
             // Probably a clever way to avoid this allocation but for now we will take it.
-            let full_source = Self::format_error_source(source, description);
+            let full_source = format_error_source(source, description);
             self.source.set_str(&full_source)
         }
 
@@ -77,30 +79,6 @@ mod error_cluster_link_features {
             self.code = code;
             self.status = LV_TRUE;
             self.set_source(source, description)
-        }
-    }
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        #[test]
-        fn test_source_writer_empty_description() {
-            let source = ErrorCluster::format_error_source("Rust", "");
-            assert_eq!(source, "Rust");
-        }
-
-        #[test]
-        fn test_source_writer_with_description() {
-            let source = ErrorCluster::format_error_source("Rust", "An Error Occured");
-            let expected = "Rust\n<ERR>\nAn Error Occured";
-            assert_eq!(source, expected)
-        }
-
-        #[test]
-        fn test_source_writer_empty_source() {
-            let source = ErrorCluster::format_error_source("", "An Error Occured");
-            let expected = "<ERR>\nAn Error Occured";
-            assert_eq!(source, expected)
         }
     }
 }
@@ -155,4 +133,27 @@ impl ToLvError for LVInteropError {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_source_writer_empty_description() {
+        let source = format_error_source("Rust", "");
+        assert_eq!(source, "Rust");
+    }
+
+    #[test]
+    fn test_source_writer_with_description() {
+        let source = format_error_source("Rust", "An Error Occured");
+        let expected = "Rust\n<ERR>\nAn Error Occured";
+        assert_eq!(source, expected)
+    }
+
+    #[test]
+    fn test_source_writer_empty_source() {
+        let source = format_error_source("", "An Error Occured");
+        let expected = "<ERR>\nAn Error Occured";
+        assert_eq!(source, expected)
+    }
+}
