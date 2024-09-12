@@ -42,6 +42,8 @@ impl LVStatusCode {
 
     ///this will convert the LVStatusCode to either Ok(T) or Err(LVInteropError(LabviewMgError)) or Err(LVInteropError)
     ///mostly for our internal use
+    // Unused if link disabled. Allow dead code to avoid warnings.
+    #[allow(dead_code)]
     pub(crate) fn to_specific_result<T>(self, success_value: T) -> crate::errors::Result<T> {
         if self == Self::SUCCESS {
             Ok(success_value)
@@ -83,8 +85,8 @@ mod lv_status_link_features {
     impl LVStatusCode {
         pub fn description(&self) -> Cow<'static, str> {
             use crate::labview::memory_api;
-            use std::mem::MaybeUninit;
             use crate::types::LStrHandle;
+            use std::mem::MaybeUninit;
 
             static DEFAULT_STRING: &str = "LabVIEW-Interop: Description not retrievable";
             let mut error_text_ptr = MaybeUninit::<LStrHandle>::uninit();
@@ -95,7 +97,8 @@ mod lv_status_link_features {
             };
 
             unsafe {
-                if memory_api.error_code_description(self.0, error_text_ptr.as_mut_ptr() as *mut usize)
+                if memory_api
+                    .error_code_description(self.0, error_text_ptr.as_mut_ptr() as *mut usize)
                 {
                     let error_text_ptr = error_text_ptr.assume_init();
                     let desc = error_text_ptr.to_rust_string().to_string();

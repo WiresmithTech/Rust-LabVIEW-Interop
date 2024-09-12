@@ -1,7 +1,7 @@
 use labview_interop::types::LStrOwned;
 pub use labview_interop::types::{string::LStrHandle, LVBool};
-use labview_interop::{types::LVStatusCode, memory::UPtr, sync::LVUserEvent};
 use labview_interop::{labview_layout, memory::UHandle};
+use labview_interop::{memory::UPtr, sync::LVUserEvent, types::LVStatusCode};
 
 /// This will check the provided handle is valid and also provide results from a null and made up handle
 /// to confirm the validity check works.

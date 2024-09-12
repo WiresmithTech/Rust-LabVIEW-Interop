@@ -1,7 +1,7 @@
-use labview_interop::types::{LStrHandle, LVStatusCode};
 /// A simple type for testing the error integration.
 ///
 use labview_interop::types::{ErrorClusterPtr, ToLvError};
+use labview_interop::types::{LStrHandle, LVStatusCode};
 struct ErrorText(&'static str);
 
 #[cfg(target_pointer_width = "64")]

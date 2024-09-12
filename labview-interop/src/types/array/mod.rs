@@ -1,19 +1,17 @@
 //! The arrays module covers LabVIEW multidimensional array.
 //!
 
+mod dimensions;
 #[cfg(feature = "link")]
 mod memory;
 #[cfg(all(feature = "ndarray", target_pointer_width = "64"))]
 mod ndarray;
-mod dimensions;
 
 use crate::labview_layout;
-use crate::memory::{LVCopy, UHandle};
 #[cfg(feature = "link")]
 use crate::memory::OwnedUHandle;
+use crate::memory::{LVCopy, UHandle};
 pub use dimensions::LVArrayDims;
-
-
 
 labview_layout!(
     /// Internal LabVIEW array representation.
@@ -130,5 +128,3 @@ pub type LVArrayHandle<'a, const D: usize, T> = UHandle<'a, LVArray<D, T>>;
 /// Definition of an owned handle to an array. Helper for FFI definition.
 #[cfg(feature = "link")]
 pub type LVArrayOwned<const D: usize, T> = OwnedUHandle<LVArray<D, T>>;
-
-

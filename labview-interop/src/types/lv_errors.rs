@@ -4,14 +4,14 @@
 //! on unaligned pointer access.
 use std::borrow::Cow;
 
+#[cfg(feature = "link")]
+use crate::errors::Result;
 use crate::errors::{LVInteropError, MgError};
-use crate::types::LVStatusCode;
 use crate::labview_layout;
 use crate::memory::UPtr;
 use crate::types::LStrHandle;
 use crate::types::LVBool;
-#[cfg(feature = "link")]
-use crate::errors::Result;
+use crate::types::LVStatusCode;
 
 labview_layout!(
     /// The cluster format used by LabVIEW for transmitting errors.
@@ -39,45 +39,48 @@ mod error_cluster_link_features {
     use crate::errors::Result;
     use crate::types::boolean::{LV_FALSE, LV_TRUE};
 
-impl<'a> ErrorCluster<'a> {
-    fn format_error_source(source: &str, description: &str) -> String {
-        match (source, description) {
-            ("", description) => format!("<ERR>\n{description}"),
-            (source, "") => source.to_string(),
-            (source, description) => format!("{source}\n<ERR>\n{description}"),
+    impl<'a> ErrorCluster<'a> {
+        fn format_error_source(source: &str, description: &str) -> String {
+            match (source, description) {
+                ("", description) => format!("<ERR>\n{description}"),
+                (source, "") => source.to_string(),
+                (source, description) => format!("{source}\n<ERR>\n{description}"),
+            }
+        }
+
+        /// Set a description and source in the format that LabVIEW will interpret for display.
+        fn set_source(&mut self, source: &str, description: &str) -> Result<()> {
+            // Probably a clever way to avoid this allocation but for now we will take it.
+            let full_source = Self::format_error_source(source, description);
+            self.source.set_str(&full_source)
+        }
+
+        /// Set the error cluster to a warning state.
+        pub fn set_warning(
+            &mut self,
+            code: LVStatusCode,
+            source: &str,
+            description: &str,
+        ) -> Result<()> {
+            self.code = code;
+            self.status = LV_FALSE;
+            self.set_source(source, description)
+        }
+
+        /// Set the error cluster to an error state.
+        pub fn set_error(
+            &mut self,
+            code: LVStatusCode,
+            source: &str,
+            description: &str,
+        ) -> Result<()> {
+            self.code = code;
+            self.status = LV_TRUE;
+            self.set_source(source, description)
         }
     }
-
-    /// Set a description and source in the format that LabVIEW will interpret for display.
-    fn set_source(&mut self, source: &str, description: &str) -> Result<()> {
-        // Probably a clever way to avoid this allocation but for now we will take it.
-        let full_source = Self::format_error_source(source, description);
-        self.source.set_str(&full_source)
-    }
-
-    /// Set the error cluster to a warning state.
-    pub fn set_warning(
-        &mut self,
-        code: LVStatusCode,
-        source: &str,
-        description: &str,
-    ) -> Result<()> {
-        self.code = code;
-        self.status = LV_FALSE;
-        self.set_source(source, description)
-    }
-
-    /// Set the error cluster to an error state.
-    pub fn set_error(&mut self, code: LVStatusCode, source: &str, description: &str) -> Result<()> {
-        self.code = code;
-        self.status = LV_TRUE;
-        self.set_source(source, description)
-    }
-}
     #[cfg(test)]
     mod tests {
-        use super::*;
-
         use super::*;
 
         #[test]
@@ -152,7 +155,4 @@ impl ToLvError for LVInteropError {
 }
 
 #[cfg(test)]
-mod tests {
-
-
-}
+mod tests {}

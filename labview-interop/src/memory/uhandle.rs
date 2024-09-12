@@ -235,7 +235,8 @@ mod uhandle_link_features {
             if !self.valid() {
                 return Err(InternalError::InvalidHandle.into());
             }
-            let error = crate::labview::memory_api()?.copy_handle(other as *mut usize, self.0 as usize);
+            let error =
+                crate::labview::memory_api()?.copy_handle(other as *mut usize, self.0 as usize);
             error.to_specific_result(())
         }
     }

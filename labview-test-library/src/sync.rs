@@ -1,9 +1,9 @@
 use labview_interop::{
-    types::LVStatusCode,
     labview_layout,
     memory::UPtr,
     sync::{LVUserEvent, Occurence},
     types::LStrOwned,
+    types::LVStatusCode,
 };
 
 #[no_mangle]

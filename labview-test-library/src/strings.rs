@@ -3,8 +3,8 @@
 use std::ffi::{c_char, CStr};
 
 use labview_interop::{
-    types::LVStatusCode,
     types::string::{LStrHandle, LStrOwned},
+    types::LVStatusCode,
 };
 #[no_mangle]
 pub extern "C" fn hello_world(mut string: LStrHandle) -> LVStatusCode {

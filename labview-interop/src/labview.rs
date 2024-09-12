@@ -8,9 +8,9 @@ use ctor::ctor;
 use dlopen2::wrapper::{Container, WrapperApi};
 
 use crate::{
-    errors::{InternalError,  Result},
-    types::LVStatusCode,
+    errors::{InternalError, Result},
     memory::MagicCookie,
+    types::LVStatusCode,
 };
 
 /// Represents as UHandle passed by value. Can't use the generic

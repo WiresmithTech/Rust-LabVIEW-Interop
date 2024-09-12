@@ -68,8 +68,8 @@ impl<T: ?Sized> DerefMut for UPtr<T> {
 /// # Safety
 ///
 /// * UPtr memory is managed by the Labview Memory Manager, which is thread safe
-unsafe impl<'a, T: ?Sized> Send for UPtr<T> {}
-unsafe impl<'a, T: ?Sized> Sync for UPtr<T> {}
+unsafe impl<T: ?Sized> Send for UPtr<T> {}
+unsafe impl<T: ?Sized> Sync for UPtr<T> {}
 
 #[cfg(test)]
 mod tests {

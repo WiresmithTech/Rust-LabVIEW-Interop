@@ -16,6 +16,7 @@ integration-tests-x64:
 integration-tests: integration-tests-x86 integration-tests-x64
 
 validate:
+  cargo fmt --all -- --check
   # Check we can build with no features (i.e no link)
   cargo check -p labview-interop --no-default-features
   # Check no conflicts with features.

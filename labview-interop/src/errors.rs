@@ -38,6 +38,7 @@
 //! * -8999 through -8000
 //! * 5000 through 9999
 //! * 500,000 through 599,999
+//!
 //! For obvious reasons the labview interop crate will use the **range 542,000 to 542,999** for errors that are generated
 //! internally and not handed down by c functions
 //!
