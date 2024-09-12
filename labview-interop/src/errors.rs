@@ -55,11 +55,9 @@
 //! This enum has custom errors for our internal use, we can hold MgErrors, and as last resort we can also hold
 //! LVError
 
-use thiserror::Error;
-
 use crate::types::LVStatusCode;
-
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use thiserror::Error;
 
 /// the conversion from LVInteropError back to LVStatusCode is important
 /// to return the status in extern "C" functions back to LV
@@ -67,17 +65,29 @@ impl<T> From<Result<T>> for LVStatusCode {
     fn from(value: Result<T>) -> Self {
         match value {
             Ok(_) => LVStatusCode::SUCCESS,
-            Err(err) => err.into(),
+            Err(err) => (&err).into(),
         }
     }
 }
-impl From<LVInteropError> for LVStatusCode {
-    fn from(value: LVInteropError) -> Self {
+impl From<&LVInteropError> for LVStatusCode {
+    fn from(value: &LVInteropError) -> Self {
         match value {
             LVInteropError::LabviewMgError(e) => e.into(),
-            LVInteropError::InternalError(e) => e.into(), // TODO
-            LVInteropError::LabviewError(e) => e,
+            LVInteropError::InternalError(e) => e.into(),
+            LVInteropError::LabviewError(e) => *e,
         }
+    }
+}
+
+impl From<LVInteropError> for LVStatusCode {
+    fn from(value: LVInteropError) -> Self {
+        (&value).into()
+    }
+}
+
+impl From<LVStatusCode> for LVInteropError {
+    fn from(status: LVStatusCode) -> Self {
+        LVInteropError::LabviewError(status)
     }
 }
 
@@ -344,10 +354,16 @@ impl TryFrom<LVStatusCode> for MgError {
     }
 }
 
+impl From<&MgError> for LVStatusCode {
+    fn from(errcode: &MgError) -> LVStatusCode {
+        let erri32: i32 = *errcode as i32;
+        erri32.into()
+    }
+}
+
 impl From<MgError> for LVStatusCode {
     fn from(errcode: MgError) -> LVStatusCode {
-        let erri32: i32 = errcode.into();
-        erri32.into()
+        (&errcode).into()
     }
 }
 
