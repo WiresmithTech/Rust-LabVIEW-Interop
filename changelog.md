@@ -5,6 +5,9 @@
 * Added support for `LVStatusCode` and retrieving error descriptions from LabVIEW.
 * Added api for accessing dimensions of arrays.
 
+#### Fixes
+
+* Expose NumericArrayResize trait to users of the Library.
 
 ## v0.3.0
 

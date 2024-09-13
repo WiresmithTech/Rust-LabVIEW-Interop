@@ -9,7 +9,9 @@ mod ndarray;
 
 use crate::labview_layout;
 #[cfg(feature = "link")]
-use crate::memory::OwnedUHandle;
+pub use crate::memory::{OwnedUHandle };
+#[cfg(feature = "link")]
+pub use memory::NumericArrayResizable;
 use crate::memory::{LVCopy, UHandle};
 pub use dimensions::LVArrayDims;
 
