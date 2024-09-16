@@ -8,6 +8,7 @@ repository = "https://github.com/WiresmithTech/Rust-LabVIEW-Interop"
 description = "Types and wrappers for interperating with LabVIEW when called as a library"
 keywords = ["labview", "ni"]
 readme = "..\\README.md"
+rust-version = "1.80.0"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -18,7 +19,6 @@ chrono = { version = "0.4", optional = true }
 dlopen2 = { version = "0.7", optional = true }
 dlopen2_derive = { version = "0.4", optional = true }
 ndarray = { version = "0.16.1", optional = true }
-ctor = { version = "0.2.4" }
 encoding_rs = "0.8"
 codepage = "0.1"
 num_enum = "0.7.2"

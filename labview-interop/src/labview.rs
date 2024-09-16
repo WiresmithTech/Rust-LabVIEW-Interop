@@ -3,10 +3,11 @@
 //!
 
 use std::ffi::c_void;
+use std::sync::LazyLock;
 
-use ctor::ctor;
 use dlopen2::wrapper::{Container, WrapperApi};
 
+use crate::errors::LVInteropError;
 use crate::{
     errors::{InternalError, Result},
     memory::MagicCookie,
@@ -23,20 +24,22 @@ pub(crate) type UHandleValue = usize;
 /// aren't generic.
 pub(crate) type UPtrValue = usize;
 
-#[ctor]
-static SYNC_API: Option<Container<SyncApi>> = unsafe { Container::load_self().ok() };
+static SYNC_API: LazyLock<Result<Container<SyncApi>>> = LazyLock::new(|| unsafe {
+    Container::load_self()
+        .map_err(|e| LVInteropError::InternalError(InternalError::NoLabviewApi(e.to_string())))
+});
 
 pub fn sync_api() -> Result<&'static Container<SyncApi>> {
-    SYNC_API.as_ref().ok_or(InternalError::NoLabviewApi.into())
+    SYNC_API.as_ref().map_err(|e| e.clone())
 }
 
-#[ctor]
-static MEMORY_API: Option<Container<MemoryApi>> = unsafe { Container::load_self().ok() };
+static MEMORY_API: LazyLock<Result<Container<MemoryApi>>> = LazyLock::new(|| unsafe {
+    Container::load_self()
+        .map_err(|e| LVInteropError::InternalError(InternalError::NoLabviewApi(e.to_string())))
+});
 
 pub fn memory_api() -> Result<&'static Container<MemoryApi>> {
-    MEMORY_API
-        .as_ref()
-        .ok_or(InternalError::NoLabviewApi.into())
+    MEMORY_API.as_ref().map_err(|e| e.clone())
 }
 
 /// The LabVIEW synchronisation features are part of the Support Manager API.

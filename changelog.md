@@ -1,9 +1,14 @@
 ## v0.4.0
 
+### Breaking Changes
+
+* MSRV has been bumped to 1.80.0 for `LazyLock` support.
+
 ### Features
 
 * Added support for `LVStatusCode` and retrieving error descriptions from LabVIEW.
 * Added api for accessing dimensions of arrays.
+* Lazily load LabVIEW functions to allow time for LabVIEW to load.
 
 #### Fixes
 

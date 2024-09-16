@@ -33,7 +33,6 @@ labview_layout!(
 /// it can manipulate LabVIEW Strings.
 pub type ErrorClusterPtr<'a> = UPtr<ErrorCluster<'a>>;
 
-
 fn format_error_source(source: &str, description: &str) -> String {
     match (source, description) {
         ("", description) => format!("<ERR>\n{description}"),
@@ -49,7 +48,6 @@ mod error_cluster_link_features {
     use crate::types::boolean::{LV_FALSE, LV_TRUE};
 
     impl<'a> ErrorCluster<'a> {
-
         /// Set a description and source in the format that LabVIEW will interpret for display.
         fn set_source(&mut self, source: &str, description: &str) -> Result<()> {
             // Probably a clever way to avoid this allocation but for now we will take it.
