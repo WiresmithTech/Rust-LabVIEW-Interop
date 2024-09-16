@@ -378,13 +378,13 @@ impl From<MgError> for LVStatusCode {
 ///
 /// Our choice of a custom ranges in Labview is (see comment above on valid ranges)
 /// 542,000 to 542,999
-#[derive(Error, Debug, Clone, Copy, PartialEq)]
+#[derive(Error, Debug, Clone, PartialEq)]
 #[repr(i32)]
 pub enum InternalError {
-    #[error("LabVIEW Interop General Error. Propably because of a missing implementation.")]
+    #[error("LabVIEW Interop General Error. Probably because of a missing implementation.")]
     Misc = 542_000,
-    #[error("LabVIEW API unavailable. Probably because it isn't being run in LabVIEW")]
-    NoLabviewApi = 542_001,
+    #[error("LabVIEW API unavailable. Probably because it isn't being run in LabVIEW. Source Error: {0}")]
+    NoLabviewApi(String) = 542_001,
     #[error("Invalid handle when valid handle is required")]
     InvalidHandle = 542_002,
     #[error("LabVIEW arrays can only have dimensions of i32 range.")]
@@ -399,13 +399,22 @@ pub enum InternalError {
     InvalidMgErrorCode = 542_006,
 }
 
+
 impl From<InternalError> for LVStatusCode {
     fn from(err: InternalError) -> LVStatusCode {
-        let err_i32: i32 = err as i32;
+        let err_i32: i32 = match err {
+            InternalError::Misc => 542_000,
+            InternalError::NoLabviewApi(_) => 542_001,
+            InternalError::InvalidHandle => 542_002,
+            InternalError::ArrayDimensionsOutOfRange => 542_003,
+            InternalError::ArrayDimensionMismatch => 542_004,
+            InternalError::HandleCreationFailed => 542_005,
+            InternalError::InvalidMgErrorCode => 542_006,
+        };
         err_i32.into()
     }
 }
-#[derive(Error, Debug, Clone, Copy, PartialEq)]
+#[derive(Error, Debug, Clone, PartialEq)]
 pub enum LVInteropError {
     #[error("Internal LabVIEW Manager Error: {0}")]
     LabviewMgError(#[from] MgError),
@@ -444,7 +453,7 @@ mod tests {
         let status: LVStatusCode = LVStatusCode::from(42);
         assert_eq!(status, err.into());
 
-        let err: LVInteropError = InternalError::NoLabviewApi.into();
+        let err: LVInteropError = InternalError::NoLabviewApi("Test Inner message".to_string()).into();
         let status: LVStatusCode = LVStatusCode::from(542_001);
 
         println!("{}", status);
