@@ -33,6 +33,9 @@ labview_layout!(
 /// it can manipulate LabVIEW Strings.
 pub type ErrorClusterPtr<'a> = UPtr<ErrorCluster<'a>>;
 
+/// Format the source and description into a string that LabVIEW will interpret.
+// Only used in link but sat outside the module to make testing easier.
+#[cfg(any(test, feature = "link"))]
 fn format_error_source(source: &str, description: &str) -> String {
     match (source, description) {
         ("", description) => format!("<ERR>\n{description}"),
