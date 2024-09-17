@@ -14,6 +14,28 @@ use crate::{
     types::LVStatusCode,
 };
 
+/// The path to the LabVIEW runtime library.
+/// Set as const, so we can swap this for different platforms if required.
+const LVRT_PATH: &str = "lvrt";
+
+fn load_container<T: WrapperApi>() -> Result<Container<T>> {
+    let self_result = unsafe {
+        Container::load_self()
+            .map_err(|e| LVInteropError::InternalError(InternalError::NoLabviewApi(e.to_string())))
+    };
+    match self_result {
+        Ok(container) => Ok(container),
+        Err(_) => {
+            // If self doesn't work (expected in IDE) attempt to load the lvrt instead (expected in runtime)
+            unsafe {
+                Container::load(LVRT_PATH).map_err(|e| {
+                    LVInteropError::InternalError(InternalError::NoLabviewApi(e.to_string()))
+                })
+            }
+        }
+    }
+}
+
 /// Represents as UHandle passed by value. Can't use the generic
 /// version from the memory module else since the functions
 /// aren't generic.
@@ -24,18 +46,14 @@ pub(crate) type UHandleValue = usize;
 /// aren't generic.
 pub(crate) type UPtrValue = usize;
 
-static SYNC_API: LazyLock<Result<Container<SyncApi>>> = LazyLock::new(|| unsafe {
-    Container::load_self()
-        .map_err(|e| LVInteropError::InternalError(InternalError::NoLabviewApi(e.to_string())))
-});
+static SYNC_API: LazyLock<Result<Container<SyncApi>>> = LazyLock::new(load_container);
 
 pub fn sync_api() -> Result<&'static Container<SyncApi>> {
     SYNC_API.as_ref().map_err(|e| e.clone())
 }
 
-static MEMORY_API: LazyLock<Result<Container<MemoryApi>>> = LazyLock::new(|| unsafe {
-    let result = Container::load_self()
-        .map_err(|e| LVInteropError::InternalError(InternalError::NoLabviewApi(e.to_string())));
+static MEMORY_API: LazyLock<Result<Container<MemoryApi>>> = LazyLock::new(|| {
+    let result = load_container::<MemoryApi>();
     // We will print an error here as without the memory manager, we can't send errors to LabVIEW.
     // I don't like using eprintln in a library, but I suspect it won't be a problem since this
     // is a library for LabVIEW.
