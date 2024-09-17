@@ -7,12 +7,13 @@
 ### Features
 
 * Added support for `LVStatusCode` and retrieving error descriptions from LabVIEW.
-* Added api for accessing dimensions of arrays.
+* Added API for accessing dimensions of arrays.
 * Add API to error clusters to execute the rust code following the LabVIEW error semantics.
 * Lazily load LabVIEW functions to allow time for LabVIEW to load.
 #### Fixes
 
 * Expose NumericArrayResize trait to users of the Library.
+* Correct loads the LabVIEW APIs when called from the runtime engine.
 
 ## v0.3.0
 
