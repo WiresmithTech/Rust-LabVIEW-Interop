@@ -2,8 +2,6 @@
 //!
 //! This is only available in 64 bit currently due to restrictions
 //! on unaligned pointer access.
-use std::borrow::Cow;
-
 #[cfg(feature = "link")]
 use crate::errors::Result;
 use crate::errors::{LVInteropError, MgError};
@@ -12,6 +10,7 @@ use crate::memory::UPtr;
 use crate::types::LStrHandle;
 use crate::types::LVBool;
 use crate::types::LVStatusCode;
+use std::borrow::Cow;
 
 labview_layout!(
     /// The cluster format used by LabVIEW for transmitting errors.
@@ -22,12 +21,19 @@ labview_layout!(
     }
 );
 
+impl<'a> ErrorCluster<'a> {
+    /// Does the error cluster contain an error.
+    pub fn is_err(&self) -> bool {
+        self.status.into()
+    }
+}
+
 /// The pointer as passed by LabVIEW when using "Handles By Value" for type.
 ///
 /// Debugging shows only one level of indirection hence UPtr here.
 ///
 /// It is recommended to manually call `ErrorClusterPtr::as_ref` or `ErrorClusterPtr::as_mut`
-/// so that null pointeres can be detected.
+/// so that null pointers can be detected.
 ///
 /// Many string manipulation functions are only available with the `link` feature enabled so
 /// it can manipulate LabVIEW Strings.
@@ -41,6 +47,92 @@ fn format_error_source(source: &str, description: &str) -> String {
         ("", description) => format!("<ERR>\n{description}"),
         (source, "") => source.to_string(),
         (source, description) => format!("{source}\n<ERR>\n{description}"),
+    }
+}
+
+#[cfg(feature = "link")]
+impl ErrorClusterPtr<'_> {
+    /// Wrap the provided function in error handling to match LabVIEW semantics.
+    ///
+    /// i.e. no execution on error in, convert return errors into error cluster.
+    ///
+    /// ## Parameters
+    ///
+    /// - `return_on_error` - The value to return if an error.
+    /// - `function` - The function to wrap. This is intended to be a closure for
+    ///   easy use.
+    ///
+    /// ## Example
+    ///
+    /// ```rust
+    /// use labview_interop::types::ErrorClusterPtr;
+    /// use labview_interop::errors::LVInteropError;
+    /// use labview_interop::types::LStrHandle;
+    ///
+    /// #[no_mangle]
+    /// pub extern "C" fn example_function(mut error_cluster: ErrorClusterPtr, mut string_input: LStrHandle) -> i32 {
+    ///   error_cluster.wrap_function(42, || -> Result<i32, LVInteropError> {
+    ///    // Do some work
+    ///    string_input.set_str("Hello World")?;
+    ///   Ok(42)
+    ///  })
+    /// }
+    /// ```
+    pub fn wrap_function<R, E: ToLvError, F: FnOnce() -> std::result::Result<R, E>>(
+        &mut self,
+        return_on_error: R,
+        function: F,
+    ) -> R {
+        if self.is_err() {
+            return return_on_error;
+        }
+        match function() {
+            Ok(value) => value,
+            Err(error) => {
+                let _ = error.write_error(self);
+                return_on_error
+            }
+        }
+    }
+
+    /// Wrap the provided function in error handling to match LabVIEW semantics.
+    ///
+    /// i.e. no execution on error in, convert return errors into error cluster.
+    ///
+    /// This version returns the LabVIEW status code of the error.
+    /// To return a different value, see [`ErrorClusterPtr::wrap_function`].
+    ///
+    /// ## Parameters
+    ///
+    /// - `function` - The function to wrap. This is intended to be a closure for
+    ///   easy use.
+    ///
+    /// ## Example
+    ///
+    /// ```rust
+    /// use labview_interop::types::{ErrorClusterPtr, LVStatusCode};
+    /// use labview_interop::errors::LVInteropError;
+    /// use labview_interop::types::LStrHandle;
+    ///
+    /// #[no_mangle]
+    /// pub extern "C" fn example_function(mut error_cluster: ErrorClusterPtr, mut string_input: LStrHandle) -> LVStatusCode {
+    ///   error_cluster.wrap_return_status(|| -> Result<(), LVInteropError> {
+    ///    // Do some work
+    ///    string_input.set_str("Hello World")?;
+    ///     Ok(())
+    ///
+    ///  })
+    /// }
+    /// ```
+    pub fn wrap_return_status<E: ToLvError, F: FnOnce() -> std::result::Result<(), E>>(
+        &mut self,
+        function: F,
+    ) -> LVStatusCode {
+        if self.is_err() {
+            return self.code;
+        }
+        self.wrap_function((), function);
+        self.code
     }
 }
 
@@ -89,7 +181,7 @@ mod error_cluster_link_features {
 pub trait ToLvError {
     /// The code for the error. Default is 42.
     fn code(&self) -> LVStatusCode {
-        MgError::BogusError.into() // code 42, Generic Error
+        (&MgError::BogusError).into() // code 42, Generic Error
     }
 
     /// True if is error. Default is true.
@@ -112,7 +204,7 @@ pub trait ToLvError {
     ///
     /// This requires the `link` feature to enable string manipulation.
     #[cfg(feature = "link")]
-    fn write_error(&self, error_cluster: ErrorClusterPtr) -> Result<()> {
+    fn write_error(&self, error_cluster: &mut ErrorClusterPtr) -> Result<()> {
         let cluster = unsafe { error_cluster.as_ref_mut()? };
         let code = self.code();
         let source = self.source();
@@ -128,6 +220,16 @@ pub trait ToLvError {
 }
 
 impl ToLvError for LVInteropError {
+    fn code(&self) -> LVStatusCode {
+        self.into()
+    }
+    fn source(&self) -> Cow<'_, str> {
+        std::error::Error::source(self)
+            .map(|s| s.to_string())
+            .unwrap_or_default()
+            .into()
+    }
+
     fn description(&self) -> Cow<'_, str> {
         self.to_string().into()
     }
