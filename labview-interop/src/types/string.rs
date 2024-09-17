@@ -10,6 +10,7 @@ use crate::memory::OwnedUHandle;
 use crate::memory::{LVCopy, UHandle, UPtr};
 use encoding_rs::Encoding;
 use std::borrow::Cow;
+use std::sync::LazyLock;
 
 #[cfg(target_os = "windows")]
 fn get_encoding() -> &'static Encoding {
@@ -37,9 +38,8 @@ fn get_encoding() -> &'static Encoding {
     encoding_rs::UTF_8
 }
 
-#[ctor::ctor]
 /// The encoding that LabVIEW uses on the current platform.
-pub(crate) static LV_ENCODING: &'static Encoding = get_encoding();
+pub(crate) static LV_ENCODING: LazyLock<&'static Encoding> = LazyLock::new(get_encoding);
 
 labview_layout!(
     /// Internal LabVIEW string structure.
