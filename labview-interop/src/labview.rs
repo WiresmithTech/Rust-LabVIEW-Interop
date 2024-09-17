@@ -34,8 +34,16 @@ pub fn sync_api() -> Result<&'static Container<SyncApi>> {
 }
 
 static MEMORY_API: LazyLock<Result<Container<MemoryApi>>> = LazyLock::new(|| unsafe {
-    Container::load_self()
-        .map_err(|e| LVInteropError::InternalError(InternalError::NoLabviewApi(e.to_string())))
+    let result = Container::load_self()
+        .map_err(|e| LVInteropError::InternalError(InternalError::NoLabviewApi(e.to_string())));
+    // We will print an error here as without the memory manager, we can't send errors to LabVIEW.
+    // I don't like using eprintln in a library, but I suspect it won't be a problem since this
+    // is a library for LabVIEW.
+    // If we receive complaints, it could be feature flagged.
+    if let Err(e) = &result {
+        eprintln!("Failed to load LabVIEW Memory Manager API: {e}");
+    }
+    result
 });
 
 pub fn memory_api() -> Result<&'static Container<MemoryApi>> {
