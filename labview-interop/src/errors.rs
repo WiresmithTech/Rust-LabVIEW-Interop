@@ -415,8 +415,8 @@ pub enum InternalError {
     InvalidMgErrorCode = 542_006,
 }
 
-impl From<InternalError> for LVStatusCode {
-    fn from(err: InternalError) -> LVStatusCode {
+impl From<&InternalError> for LVStatusCode {
+    fn from(err: &InternalError) -> LVStatusCode {
         let err_i32: i32 = match err {
             InternalError::Misc => 542_000,
             InternalError::NoLabviewApi(_) => 542_001,

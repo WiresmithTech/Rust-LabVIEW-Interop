@@ -94,6 +94,46 @@ impl ErrorClusterPtr<'_> {
             }
         }
     }
+
+    /// Wrap the provided function in error handling to match LabVIEW semantics.
+    ///
+    /// i.e. no execution on error in, convert return errors into error cluster.
+    ///
+    /// This version returns the LabVIEW status code of the error.
+    /// To return a different value, see [`ErrorClusterPtr::wrap_function`].
+    ///
+    /// ## Parameters
+    ///
+    /// - `function` - The function to wrap. This is intended to be a closure for
+    ///   easy use.
+    ///
+    /// ## Example
+    ///
+    /// ```rust
+    /// use labview_interop::types::{ErrorClusterPtr, LVStatusCode};
+    /// use labview_interop::errors::LVInteropError;
+    /// use labview_interop::types::LStrHandle;
+    ///
+    /// #[no_mangle]
+    /// pub extern "C" fn example_function(mut error_cluster: ErrorClusterPtr, mut string_input: LStrHandle) -> LVStatusCode {
+    ///   error_cluster.wrap_return_status(|| -> Result<(), LVInteropError> {
+    ///    // Do some work
+    ///    string_input.set_str("Hello World")?;
+    ///     Ok(())
+    ///
+    ///  })
+    /// }
+    /// ```
+    pub fn wrap_return_status<E: ToLvError, F: FnOnce() -> std::result::Result<(), E>>(
+        &mut self,
+        function: F,
+    ) -> LVStatusCode {
+        if self.is_err() {
+            return self.code;
+        }
+        self.wrap_function((), function);
+        self.code
+    }
 }
 
 #[cfg(feature = "link")]
