@@ -1,13 +1,13 @@
 [package]
 name = "labview-interop"
 version = "0.4.0"
-edition = "2021"
+edition = { workspace = true }
 license = "MIT"
-homepage = "https://github.com/WiresmithTech/Rust-LabVIEW-Interop"
-repository = "https://github.com/WiresmithTech/Rust-LabVIEW-Interop"
+homepage = { workspace = true }
+repository = { workspace = true }
 description = "Types and wrappers for interperating with LabVIEW when called as a library"
 keywords = ["labview", "ni"]
-readme = "..\\README.md"
+readme = { workspace = true}
 rust-version = "1.80.0"
 
 

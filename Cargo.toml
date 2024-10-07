@@ -1,3 +1,9 @@
 [workspace]
 members = ["labview-interop", "labview-test-library"]
 resolver = "2"
+
+[workspace.package]
+readme = "README.md"
+repository = "https://github.com/WiresmithTech/Rust-LabVIEW-Interop"
+homepage = "https://github.com/WiresmithTech/Rust-LabVIEW-Interop"
+edition = "2021"
