@@ -21,7 +21,7 @@ labview_layout!(
     }
 );
 
-impl<'a> ErrorCluster<'a> {
+impl ErrorCluster<'_> {
     /// Does the error cluster contain an error.
     pub fn is_err(&self) -> bool {
         self.status.into()
@@ -142,7 +142,7 @@ mod error_cluster_link_features {
     use crate::errors::Result;
     use crate::types::boolean::{LV_FALSE, LV_TRUE};
 
-    impl<'a> ErrorCluster<'a> {
+    impl ErrorCluster<'_> {
         /// Set a description and source in the format that LabVIEW will interpret for display.
         fn set_source(&mut self, source: &str, description: &str) -> Result<()> {
             // Probably a clever way to avoid this allocation but for now we will take it.

@@ -144,7 +144,7 @@ impl PartialEq for LStr {
 ///
 /// Requires the link feature.
 #[cfg(feature = "link")]
-impl<'a> LStrHandle<'a> {
+impl LStrHandle<'_> {
     /// Set the string as a binary value against the handle.
     ///
     /// This function will resize the handle based on the size of the input value.

@@ -106,7 +106,7 @@ impl From<LVStatusCode> for LVInteropError {
 /// Accoring to https://www.ni.com/docs/en-US/bundle/labview/page/labview-manager-function-errors.html
 /// the memory manager only uses a subset of this huge error list. The subset is implemented in `MgError` using
 /// the official abbreviations.
-
+///
 /// in https://www.ni.com/docs/en-US/bundle/labview/page/labview-manager-function-errors.html
 /// `MgError` implements Error on top of the `MgErrorCode` and includes a description
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Error, IntoPrimitive, TryFromPrimitive)]
@@ -387,7 +387,7 @@ impl From<MgError> for LVStatusCode {
 /// let error_code: i32 = error.into();
 /// assert_eq!(error_code, 42);
 /// ```
-
+/// 
 /// LVInteropError is our internal Error type
 /// in order to be able to easily convert it to LV ErrorClusters all Errors should possess an
 /// Error Code

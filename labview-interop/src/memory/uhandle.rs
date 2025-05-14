@@ -23,7 +23,7 @@ use std::ops::{Deref, DerefMut};
 #[derive(PartialEq, Eq)]
 pub struct UHandle<'a, T: ?Sized + 'a>(pub *mut *mut T, pub PhantomData<&'a T>);
 
-impl<'a, T: ?Sized> UHandle<'a, T> {
+impl<T: ?Sized> UHandle<'_, T> {
     /// Get a reference to the internal type. Errors if the pointer is null.
     ///
     /// # Safety
@@ -107,7 +107,7 @@ impl<'a, T: ?Sized> UHandle<'a, T> {
     }
 }
 
-impl<'a, T: ?Sized> Deref for UHandle<'a, T> {
+impl<T: ?Sized> Deref for UHandle<'_, T> {
     type Target = T;
 
     /// Extract the target type.
@@ -118,7 +118,7 @@ impl<'a, T: ?Sized> Deref for UHandle<'a, T> {
     }
 }
 
-impl<'a, T: ?Sized> DerefMut for UHandle<'a, T> {
+impl<T: ?Sized> DerefMut for UHandle<'_, T> {
     /// Deref to a mutable reference.
     ///
     /// This will panic if the handle or internal pointer is null.
@@ -127,7 +127,7 @@ impl<'a, T: ?Sized> DerefMut for UHandle<'a, T> {
     }
 }
 
-impl<'a, T: Debug + ?Sized> Debug for UHandle<'a, T> {
+impl<T: Debug + ?Sized> Debug for UHandle<'_, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         super::fmt_handle("UHandle", self, f)
     }
@@ -137,7 +137,7 @@ impl<'a, T: Debug + ?Sized> Debug for UHandle<'a, T> {
 mod uhandle_link_features {
     use super::*;
     use crate::memory::LVCopy;
-    impl<'a, T: ?Sized> UHandle<'a, T> {
+    impl<T: ?Sized> UHandle<'_, T> {
         /// Resize the handle to the desired size.
         ///
         /// # Safety
@@ -149,7 +149,7 @@ mod uhandle_link_features {
         }
     }
 
-    impl<'a, T: ?Sized + LVCopy + 'static> UHandle<'a, T> {
+    impl<T: ?Sized + LVCopy + 'static> UHandle<'_, T> {
         /// Copy the contents of one handle into another.
         ///
         /// If other points to a null value then this will allocate a handle for the contents.
@@ -245,8 +245,8 @@ mod uhandle_link_features {
 /// # Safety
 ///
 /// * UHandle memory is managed by the Labview Memory Manager, which is thread safe
-unsafe impl<'a, T: ?Sized> Send for UHandle<'a, T> {}
-unsafe impl<'a, T: ?Sized> Sync for UHandle<'a, T> {}
+unsafe impl<T: ?Sized> Send for UHandle<'_, T> {}
+unsafe impl<T: ?Sized> Sync for UHandle<'_, T> {}
 
 #[cfg(test)]
 mod tests {

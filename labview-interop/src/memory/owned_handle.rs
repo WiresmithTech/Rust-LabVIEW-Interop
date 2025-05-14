@@ -218,7 +218,7 @@ impl<T: ?Sized + LVCopy + 'static> OwnedUHandle<T> {
     }
 }
 
-impl<'a, T: ?Sized + LVCopy + 'static> UHandle<'a, T> {
+impl<T: ?Sized + LVCopy + 'static> UHandle<'_, T> {
     /// Try to create an owned handle from the current handle.
     ///
     /// The owned handle will have its own handle to the data and
