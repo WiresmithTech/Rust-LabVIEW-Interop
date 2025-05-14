@@ -74,7 +74,7 @@ impl LVTime {
     pub const fn from_parts(seconds: i64, fractions: u64) -> Self {
         Self {
             seconds,
-            fractions,       
+            fractions,
         }
     }
 
@@ -145,14 +145,14 @@ mod chrono {
                 .ok_or(LVTimeError::ChronoOutOfRange)
         }
     }
-    
+
     /// Implementation for owned types as well. Probably rarer but kept for backwards
     /// compatability.
     impl TryFrom<LVTime> for DateTime<Utc> {
         type Error = LVTimeError;
 
         fn try_from(value: LVTime) -> Result<Self, Self::Error> {
-            value.try_into() 
+            (&value).try_into()
         }
     }
 
