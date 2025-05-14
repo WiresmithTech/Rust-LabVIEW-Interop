@@ -387,7 +387,7 @@ impl From<MgError> for LVStatusCode {
 /// let error_code: i32 = error.into();
 /// assert_eq!(error_code, 42);
 /// ```
-/// 
+///
 /// LVInteropError is our internal Error type
 /// in order to be able to easily convert it to LV ErrorClusters all Errors should possess an
 /// Error Code

@@ -72,10 +72,7 @@ impl LVTime {
 
     /// Build from the full seconds and fractional second parts.
     pub const fn from_parts(seconds: i64, fractions: u64) -> Self {
-        Self {
-            seconds,
-            fractions,
-        }
+        Self { seconds, fractions }
     }
 
     /// Seperate out the u64 components.
@@ -84,15 +81,28 @@ impl LVTime {
         (self.seconds, self.fractions)
     }
 
-
     /// To little endian bytes.
     pub const fn to_le_bytes(&self) -> [u8; 16] {
         // Note the reversal here so it is like a u128.
         let littlest = self.fractions.to_le_bytes();
         let biggest = self.seconds.to_le_bytes();
         [
-            littlest[0], littlest[1], littlest[2], littlest[3], littlest[4], littlest[5], littlest[6], littlest[7],
-            biggest[0], biggest[1], biggest[2], biggest[3], biggest[4], biggest[5], biggest[6], biggest[7],
+            littlest[0],
+            littlest[1],
+            littlest[2],
+            littlest[3],
+            littlest[4],
+            littlest[5],
+            littlest[6],
+            littlest[7],
+            biggest[0],
+            biggest[1],
+            biggest[2],
+            biggest[3],
+            biggest[4],
+            biggest[5],
+            biggest[6],
+            biggest[7],
         ]
     }
 
@@ -101,16 +111,34 @@ impl LVTime {
         let biggest = self.seconds.to_be_bytes();
         let littlest = self.fractions.to_be_bytes();
         [
-            biggest[0], biggest[1], biggest[2], biggest[3], biggest[4], biggest[5], biggest[6], biggest[7],
-            littlest[0], littlest[1], littlest[2], littlest[3], littlest[4], littlest[5], littlest[6], littlest[7],
+            biggest[0],
+            biggest[1],
+            biggest[2],
+            biggest[3],
+            biggest[4],
+            biggest[5],
+            biggest[6],
+            biggest[7],
+            littlest[0],
+            littlest[1],
+            littlest[2],
+            littlest[3],
+            littlest[4],
+            littlest[5],
+            littlest[6],
+            littlest[7],
         ]
     }
 
     /// From little endian bytes.
     pub const fn from_le_bytes(bytes: [u8; 16]) -> Self {
         // Ugly but keeps this const compatible.
-        let littlest = [bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7]];
-        let biggest = [bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]];
+        let littlest = [
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+        ];
+        let biggest = [
+            bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15],
+        ];
         let fraction = u64::from_le_bytes(littlest);
         let seconds = i64::from_le_bytes(biggest);
         Self::from_parts(seconds, fraction)
@@ -118,8 +146,12 @@ impl LVTime {
 
     /// From big endian bytes.
     pub const fn from_be_bytes(bytes: [u8; 16]) -> Self {
-        let biggest = [bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7]];
-        let littlest = [bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]];
+        let biggest = [
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+        ];
+        let littlest = [
+            bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15],
+        ];
         let fractions = u64::from_be_bytes(littlest);
         let seconds = i64::from_be_bytes(biggest);
         Self::from_parts(seconds, fractions)
