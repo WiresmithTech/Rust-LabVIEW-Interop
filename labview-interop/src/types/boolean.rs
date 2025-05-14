@@ -55,33 +55,26 @@ mod tests {
     #[test]
     fn test_boolean_lvfalse_to_bool() {
         let value: bool = LV_FALSE.into();
-        assert_eq!(value, false)
+        assert!(!value)
     }
 
     #[test]
     fn test_boolean_lvtrue_to_bool() {
         let value: bool = LV_TRUE.into();
-        assert_eq!(value, true)
+        assert!(value)
     }
 
     #[test]
     fn test_any_non_zero_to_bool() {
         let value: bool = LVBool(23).into();
-        assert_eq!(value, true)
+        assert!(value)
     }
 
     #[test]
     fn lv_bool_in_if_statement() {
-        if LV_TRUE.into() {
-            assert!(true);
-        } else {
-            assert!(false);
-        }
-
-        if LV_FALSE.into() {
-            assert!(false);
-        } else {
-            assert!(true);
-        }
+        let true_bool: bool = LV_TRUE.into();
+        let false_bool: bool = LV_FALSE.into();
+        assert!(true_bool);
+        assert!(!false_bool);
     }
 }

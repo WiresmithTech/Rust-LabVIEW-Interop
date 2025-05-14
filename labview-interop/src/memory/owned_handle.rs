@@ -33,7 +33,7 @@ use crate::labview::memory_api;
 ///
 /// ## Example
 /// ```no_run
-/// use labview_interop::types::{LStrHandle, LStrOwned};;
+/// use labview_interop::types::{LStrHandle, LStrOwned};
 ///
 /// fn handle_to_owned(handle: LStrHandle) -> LStrOwned {
 ///    handle.try_to_owned().unwrap()
@@ -80,7 +80,7 @@ impl<T: ?Sized> OwnedUHandle<T> {
     /// # Safety
     ///
     /// * This will create a handle to un-initialized memory. The provided initialisation
-    ///    routine must prepare the memory.
+    ///   routine must prepare the memory.
     pub(crate) unsafe fn new_unsized(
         init_routine: impl FnOnce(&mut UHandle<'static, T>) -> Result<()>,
     ) -> Result<Self> {
@@ -107,7 +107,7 @@ impl<T: ?Sized> OwnedUHandle<T> {
     /// # Safety
     ///
     /// * This needs to take a mutable reference to self and lifetime annotation on UHandle,
-    ///    in order to avoid creating multiple UHandles.
+    ///   to avoid creating multiple UHandles.
     ///
     /// # Examples
     ///

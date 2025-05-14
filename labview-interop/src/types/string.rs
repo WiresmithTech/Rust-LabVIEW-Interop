@@ -265,7 +265,7 @@ mod tests {
             // In this case, its just the length of the slice.
             let ptr = core::slice::from_raw_parts(ptr, n);
             // Transmute the slice into the real fat pointer type.
-            let ptr = std::mem::transmute::<_, *mut LStr>(ptr);
+            let ptr = ptr as *const [u8] as *mut LStr;
             // Build a box from the raw pointer.
             let b = Box::from_raw(ptr);
             // Make sure its the correct size.
