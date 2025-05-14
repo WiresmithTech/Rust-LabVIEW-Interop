@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2](https://github.com/WiresmithTech/Rust-LabVIEW-Interop/compare/labview-interop-v0.4.1...labview-interop-v0.4.2) - 2025-05-14
+
+### Fixed
+
+- Convert from Time Reference to Chrono
+
 ## [0.4.0](https://github.com/WiresmithTech/Rust-LabVIEW-Interop/compare/labview-interop-v0.3.0...labview-interop-v0.4.0) - 2024-10-07
 
 ### Added
