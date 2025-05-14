@@ -12,15 +12,14 @@ pub enum LVTimeError {
     ChronoOutOfRange,
 }
 
-// The LV Type consists really of a (i64, u64) but
-// the effective storage type is u128 so I've kept
-// it there for now.
-
 /// Mirrors the internal LabVIEW timestamp structure so
 /// it can be passed back and forward.
-#[repr(transparent)]
+#[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
-pub struct LVTime(u128);
+pub struct LVTime {
+    fractions: u64,
+    seconds: i64,
+}
 
 ///The Unix Epoch in LabVIEW epoch seconds for shifting timestamps between them.
 ///
@@ -39,9 +38,10 @@ impl LVTime {
         (fractional as f64) / 0xFFFF_FFFF_FFFF_FFFFu64 as f64
     }
 
-    ///Extract the seconds component which is referenced to the LabVIEW epoc.
+    ///Extract the seconds component which is referenced to the LabVIEW epoch.
+    #[inline]
     pub const fn seconds(&self) -> i64 {
-        (self.0 >> 64) as i64
+        self.seconds
     }
 
     /// From a double precision number which is the seconds
@@ -72,46 +72,57 @@ impl LVTime {
 
     /// Build from the full seconds and fractional second parts.
     pub const fn from_parts(seconds: i64, fractions: u64) -> Self {
-        let time = (seconds as u128) << 64 | (fractions as u128);
-        Self(time)
+        Self {
+            seconds,
+            fractions,       
+        }
     }
 
     /// Seperate out the u64 components.
     #[inline]
     pub const fn to_parts(&self) -> (i64, u64) {
-        let fractions = (self.0 & 0xFFFF_FFFF_FFFF_FFFF) as u64;
-        (self.seconds(), fractions)
+        (self.seconds, self.fractions)
     }
 
-    /// Load from u128 which is the storage format
-    #[inline]
-    const fn from_u128(repr: u128) -> Self {
-        Self(repr)
-    }
-
-    #[inline]
-    const fn as_u128(&self) -> &u128 {
-        &self.0
-    }
 
     /// To little endian bytes.
     pub const fn to_le_bytes(&self) -> [u8; 16] {
-        self.as_u128().to_le_bytes()
+        // Note the reversal here so it is like a u128.
+        let littlest = self.fractions.to_le_bytes();
+        let biggest = self.seconds.to_le_bytes();
+        [
+            littlest[0], littlest[1], littlest[2], littlest[3], littlest[4], littlest[5], littlest[6], littlest[7],
+            biggest[0], biggest[1], biggest[2], biggest[3], biggest[4], biggest[5], biggest[6], biggest[7],
+        ]
     }
 
     /// To big endian bytes.
     pub const fn to_be_bytes(&self) -> [u8; 16] {
-        self.as_u128().to_be_bytes()
+        let biggest = self.seconds.to_be_bytes();
+        let littlest = self.fractions.to_be_bytes();
+        [
+            biggest[0], biggest[1], biggest[2], biggest[3], biggest[4], biggest[5], biggest[6], biggest[7],
+            littlest[0], littlest[1], littlest[2], littlest[3], littlest[4], littlest[5], littlest[6], littlest[7],
+        ]
     }
 
     /// From little endian bytes.
     pub const fn from_le_bytes(bytes: [u8; 16]) -> Self {
-        Self::from_u128(u128::from_le_bytes(bytes))
+        // Ugly but keeps this const compatible.
+        let littlest = [bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7]];
+        let biggest = [bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]];
+        let fraction = u64::from_le_bytes(littlest);
+        let seconds = i64::from_le_bytes(biggest);
+        Self::from_parts(seconds, fraction)
     }
 
     /// From big endian bytes.
     pub const fn from_be_bytes(bytes: [u8; 16]) -> Self {
-        Self::from_u128(u128::from_be_bytes(bytes))
+        let biggest = [bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7]];
+        let littlest = [bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]];
+        let fractions = u64::from_be_bytes(littlest);
+        let seconds = i64::from_be_bytes(biggest);
+        Self::from_parts(seconds, fractions)
     }
 }
 
@@ -152,7 +163,6 @@ mod tests {
     #[test]
     fn test_to_from_parts() {
         let time = LVTime::from_parts(20, 0x8000_0000_0000_0000);
-        assert_eq!(time.0, 0x14_8000_0000_0000_0000);
         assert_eq!((20, 0x8000_0000_0000_0000), time.to_parts());
     }
 
@@ -173,7 +183,6 @@ mod tests {
     #[test]
     fn test_to_from_le_bytes() {
         let time = LVTime::from_parts(20, 0x8000_0000_0000_0000);
-        assert_eq!(time.0, 0x14_8000_0000_0000_0000);
         let bytes = time.to_le_bytes();
         assert_eq!(
             bytes,
@@ -185,7 +194,6 @@ mod tests {
     #[test]
     fn test_to_from_be_bytes() {
         let time = LVTime::from_parts(20, 0x8000_0000_0000_0000);
-        assert_eq!(time.0, 0x14_8000_0000_0000_0000);
         let bytes = time.to_be_bytes();
         assert_eq!(
             bytes,
