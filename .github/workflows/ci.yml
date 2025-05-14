@@ -21,7 +21,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: ${{ matrix.target }}
-          cache: false
+          cache: true
       - name: Install Just
         run: cargo install just
       - name: Run Unit Tests
@@ -44,7 +44,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: ${{ matrix.target }}
-          cache: false
+          cache: true
           components: rustfmt,clippy
       - name: Install Just
         run: cargo install just
