@@ -135,14 +135,24 @@ mod chrono {
     /// Get the chrono time from the LabVIEW time as a UTC value.
     ///
     /// From here you can convert to a specific timezone or naive values.
-    impl TryFrom<LVTime> for DateTime<Utc> {
+    impl TryFrom<&LVTime> for DateTime<Utc> {
         type Error = LVTimeError;
 
-        fn try_from(value: LVTime) -> Result<Self, Self::Error> {
+        fn try_from(value: &LVTime) -> Result<Self, Self::Error> {
             let seconds_for_time: i64 = value.seconds() - UNIX_EPOCH_IN_LV_SECONDS_I64;
             let nanoseconds = value.sub_seconds() * 1_000_000_000f64;
             Self::from_timestamp(seconds_for_time, nanoseconds as u32)
                 .ok_or(LVTimeError::ChronoOutOfRange)
+        }
+    }
+    
+    /// Implementation for owned types as well. Probably rarer but kept for backwards
+    /// compatability.
+    impl TryFrom<LVTime> for DateTime<Utc> {
+        type Error = LVTimeError;
+
+        fn try_from(value: LVTime) -> Result<Self, Self::Error> {
+            value.try_into() 
         }
     }
 
