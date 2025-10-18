@@ -51,7 +51,7 @@ impl<T: ?Sized> UHandle<'_, T> {
     /// * It must be “dereferenceable” in the sense defined in the module documentation.
     /// * The pointer must point to an initialized instance of T.
     /// * You must enforce Rust’s aliasing rules, since the returned lifetime 'a is arbitrarily chosen and does not necessarily reflect the actual lifetime of the data. In particular, while this reference exists, the memory the pointer points to must not get accessed (read or written) through any other pointer.
-    pub unsafe fn as_ref_mut(&self) -> crate::errors::Result<&mut T> {
+    pub unsafe fn as_ref_mut(&mut self) -> crate::errors::Result<&mut T> {
         self.0
             .as_ref()
             .and_then(|ptr| ptr.as_mut())
@@ -316,20 +316,20 @@ mod tests {
     fn handle_as_ref_mut_valid() {
         let mut value = 42;
         let mut value_ptr = std::ptr::addr_of_mut!(value);
-        let handle = UHandle(std::ptr::addr_of_mut!(value_ptr), PhantomData);
+        let mut handle = UHandle(std::ptr::addr_of_mut!(value_ptr), PhantomData);
         assert_eq!(unsafe { handle.as_ref_mut() }.unwrap(), &mut 42);
     }
 
     #[test]
     fn handle_as_ref_mut_outer_null() {
-        let handle = UHandle(std::ptr::null_mut::<*mut i32>(), PhantomData);
+        let mut handle = UHandle(std::ptr::null_mut::<*mut i32>(), PhantomData);
         assert!(unsafe { handle.as_ref_mut() }.is_err());
     }
 
     #[test]
     fn handle_as_ref_mut_inner_null() {
         let mut inner_ptr = std::ptr::null_mut::<i32>();
-        let handle = UHandle(std::ptr::addr_of_mut!(inner_ptr), PhantomData);
+        let mut handle = UHandle(std::ptr::addr_of_mut!(inner_ptr), PhantomData);
         assert!(unsafe { handle.as_ref_mut() }.is_err());
     }
 
