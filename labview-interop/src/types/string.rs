@@ -15,7 +15,7 @@ use std::sync::LazyLock;
 #[cfg(target_os = "windows")]
 fn get_encoding() -> &'static Encoding {
     #[link(name = "kernel32")]
-    extern "stdcall" {
+    extern "system" {
         fn GetACP() -> u32;
     }
 
@@ -96,7 +96,7 @@ impl LStr {
     ///
     /// This returns a [`std::borrow::Cow`] to avoid any allocations if the
     /// input is already valid UTF8.
-    pub fn to_rust_string_with_encoding(&self, encoding: &'static Encoding) -> Cow<str> {
+    pub fn to_rust_string_with_encoding(&self, encoding: &'static Encoding) -> Cow<'_, str> {
         let (result, _, _) = encoding.decode(self.as_slice());
         result
     }
@@ -116,7 +116,7 @@ impl LStr {
     ///    LVStatusCode::SUCCESS
     /// }
     ///```
-    pub fn to_rust_string(&self) -> Cow<str> {
+    pub fn to_rust_string(&self) -> Cow<'_, str> {
         self.to_rust_string_with_encoding(&LV_ENCODING)
     }
 }

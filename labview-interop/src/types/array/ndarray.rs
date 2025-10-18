@@ -16,14 +16,14 @@ macro_rules! array_with_dim {
             }
 
             /// Get the LabVIEW array as an NDArray view.
-            pub fn ndarray_view(&self) -> ArrayView<T, Dim<[Ix; $dim]>> {
+            pub fn ndarray_view(&self) -> ArrayView<'_, T, Dim<[Ix; $dim]>> {
                 let dim_sizes = self.ndarray_dim();
                 let data = self.data_as_slice();
                 ArrayView::from_shape(dim_sizes, data).unwrap()
             }
 
             /// Get the LabVIEW array as an NDArray mutable view.
-            pub fn ndarray_view_mut(&mut self) -> ArrayViewMut<T, Dim<[Ix; $dim]>> {
+            pub fn ndarray_view_mut(&mut self) -> ArrayViewMut<'_, T, Dim<[Ix; $dim]>> {
                 let dim_sizes = self.ndarray_dim();
                 let data = self.data_as_slice_mut();
                 ArrayViewMut::from_shape(dim_sizes, data).unwrap()

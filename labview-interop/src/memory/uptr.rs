@@ -40,7 +40,7 @@ impl<T: ?Sized> UPtr<T> {
     /// * It must be “dereferenceable” in the sense defined in the module documentation.
     /// * The pointer must point to an initialized instance of T.
     /// * You must enforce Rust’s aliasing rules, since the returned lifetime 'a is arbitrarily chosen and does not necessarily reflect the actual lifetime of the data. In particular, while this reference exists, the memory the pointer points to must not get accessed (read or written) through any other pointer.
-    pub unsafe fn as_ref_mut(&self) -> crate::errors::Result<&mut T> {
+    pub unsafe fn as_ref_mut(&mut self) -> crate::errors::Result<&mut T> {
         self.0.as_mut().ok_or(InternalError::InvalidHandle.into())
     }
 }
@@ -94,13 +94,13 @@ mod tests {
     #[test]
     fn test_uptr_as_ref_mut() {
         let mut data = 42;
-        let ptr = UPtr(std::ptr::addr_of_mut!(data));
+        let mut ptr = UPtr(std::ptr::addr_of_mut!(data));
         assert_eq!(unsafe { ptr.as_ref_mut() }.unwrap(), &mut 42);
     }
 
     #[test]
     fn test_uptr_null() {
-        let ptr: UPtr<i32> = UPtr(std::ptr::null_mut());
+        let mut ptr: UPtr<i32> = UPtr(std::ptr::null_mut());
         assert!(unsafe { ptr.as_ref() }.is_err());
         assert!(unsafe { ptr.as_ref_mut() }.is_err());
     }
