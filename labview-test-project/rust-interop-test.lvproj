@@ -17,6 +17,7 @@
 		<Item Name="Data Structure Tests.lvclass" Type="LVClass" URL="../Data Structure Tests/Data Structure Tests.lvclass"/>
 		<Item Name="Error Tests.lvclass" Type="LVClass" URL="../Error Tests/Error Tests.lvclass"/>
 		<Item Name="Memory Manager Tests.lvclass" Type="LVClass" URL="../Memory Manager Tests/Memory Manager Tests.lvclass"/>
+		<Item Name="Refnum Tests.lvclass" Type="LVClass" URL="../Refnum Tests/Refnum Tests.lvclass"/>
 		<Item Name="String Tests.lvclass" Type="LVClass" URL="../String Tests/String Tests.lvclass"/>
 		<Item Name="Sync Tests.lvclass" Type="LVClass" URL="../Sync Tests/Sync Tests.lvclass"/>
 		<Item Name="test negative timestamp.vi" Type="VI" URL="../Timestamp Tests/test negative timestamp.vi"/>

@@ -6,6 +6,10 @@
 mod owned_handle;
 mod uhandle;
 mod uptr;
+#[cfg(feature = "link")]
+mod refnum;
+#[cfg(feature = "link")]
+mod owned_uptr;
 
 use std::fmt::Debug;
 
@@ -25,8 +29,18 @@ impl<T: Copy> LVCopy for T {}
 #[doc(hidden)]
 pub struct MagicCookie(u32);
 
+impl MagicCookie {
+    pub const fn null() -> Self {
+        Self(0)
+    }
+}
+
 #[cfg(feature = "link")]
 pub use owned_handle::OwnedUHandle;
+#[cfg(feature = "link")]
+pub use owned_uptr::OwnedUPtr;
+#[cfg(feature = "link")]
+pub use refnum::{RefNum, CookieJar};
 pub use uhandle::UHandle;
 pub use uptr::UPtr;
 

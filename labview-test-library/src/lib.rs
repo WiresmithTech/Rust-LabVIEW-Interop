@@ -8,6 +8,7 @@ mod memory_manager;
 mod strings;
 mod sync;
 mod timestamps;
+mod refnums;
 
 /// tests for arrays.
 pub use crate::arrays::*;

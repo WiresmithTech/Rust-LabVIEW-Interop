@@ -1,6 +1,6 @@
 set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
-lv_ver := "2020"
+lv_ver := "2024"
 
 unit-tests:
   cargo test --no-default-features --features chrono,ndarray

@@ -59,7 +59,7 @@ impl LVCopy for LStr {}
 /// required for any functions that need to resize the string.
 pub type LStrHandle<'a> = UHandle<'a, LStr>;
 /// Definition of a pointer to an LabVIEW String. Helper for FFI definition.
-pub type LStrPtr = UPtr<LStr>;
+pub type LStrPtr<'a> = UPtr<'a, LStr>;
 /// Definition of an owned LStr Handle.
 #[cfg(feature = "link")]
 pub type LStrOwned = OwnedUHandle<LStr>;

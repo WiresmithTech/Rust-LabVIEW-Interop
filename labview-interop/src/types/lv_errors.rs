@@ -37,7 +37,7 @@ impl ErrorCluster<'_> {
 ///
 /// Many string manipulation functions are only available with the `link` feature enabled so
 /// it can manipulate LabVIEW Strings.
-pub type ErrorClusterPtr<'a> = UPtr<ErrorCluster<'a>>;
+pub type ErrorClusterPtr<'a> = UPtr<'a, ErrorCluster<'a>>;
 
 /// Format the source and description into a string that LabVIEW will interpret.
 // Only used in link but sat outside the module to make testing easier.

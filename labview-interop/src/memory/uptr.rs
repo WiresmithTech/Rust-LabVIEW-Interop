@@ -1,7 +1,9 @@
 //! A module for working with LabVIEW pointers.
 
-use crate::errors::InternalError;
+use std::marker::PhantomData;
+use crate::errors::{InternalError};
 use std::ops::{Deref, DerefMut};
+use crate::labview::{UPtrValue};
 
 /// A pointer from LabVIEW for the data.
 ///
@@ -9,12 +11,28 @@ use std::ops::{Deref, DerefMut};
 /// for more functionality such as resizing types.
 #[repr(transparent)]
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub struct UPtr<T: ?Sized>(*mut T);
+pub struct UPtr<'a, T: ?Sized>(*mut T, PhantomData<&'a T>);
 
-impl<T: ?Sized> UPtr<T> {
+impl<'a, T: Sized> UPtr<'a, T> {
     /// Create a new UPtr from a raw pointer
-    pub fn new(ptr: *mut T) -> Self {
-        Self(ptr)
+    /// 
+    /// # SAFETY
+    /// This should be a pointer that has been allocated by the LV memory manager.
+    pub unsafe fn new(ptr: UPtrValue) -> Self {
+        Self::from_raw(ptr as *mut T)
+    }
+
+    /// Create a new UPtr value from a raw pointer.
+    ///
+    /// # SAFETY
+    /// This must be a pointer allocated by the LabVIEW memory manager.
+    pub unsafe fn from_raw(ptr: *mut T) -> Self {
+        Self(ptr, PhantomData)
+    }
+    
+    /// Convert to the raw UPtrValue for the APIs
+    pub unsafe fn as_uptr_value(&self) -> UPtrValue {
+        self.0 as UPtrValue
     }
     /// Get a reference to the internal type. Errors if the pointer is null.
     ///
@@ -43,9 +61,10 @@ impl<T: ?Sized> UPtr<T> {
     pub unsafe fn as_ref_mut(&mut self) -> crate::errors::Result<&mut T> {
         self.0.as_mut().ok_or(InternalError::InvalidHandle.into())
     }
+
 }
 
-impl<T: ?Sized> Deref for UPtr<T> {
+impl<'a, T: Sized> Deref for UPtr<'a, T> {
     type Target = T;
 
     /// Extract the target type.
@@ -56,7 +75,7 @@ impl<T: ?Sized> Deref for UPtr<T> {
     }
 }
 
-impl<T: ?Sized> DerefMut for UPtr<T> {
+impl<'a, T: Sized> DerefMut for UPtr<'a, T> {
     /// Deref to a mutable reference.
     ///
     /// This will panic if the handle or internal pointer is null.
@@ -66,10 +85,10 @@ impl<T: ?Sized> DerefMut for UPtr<T> {
 }
 
 /// # Safety
-///
-/// * UPtr memory is managed by the Labview Memory Manager, which is thread safe
-unsafe impl<T: ?Sized> Send for UPtr<T> {}
-unsafe impl<T: ?Sized> Sync for UPtr<T> {}
+/// UPtr memory is managed by the Labview Memory Manager, which is thread safe making Send OK.
+unsafe impl<'a, T: ?Sized> Send for UPtr<'a, T> {}
+
+
 
 #[cfg(test)]
 mod tests {
@@ -78,7 +97,7 @@ mod tests {
     #[test]
     fn test_uptr() {
         let mut data = 42;
-        let mut ptr = UPtr(std::ptr::addr_of_mut!(data));
+        let mut ptr = unsafe { UPtr::from_raw(std::ptr::addr_of_mut!(data)) };
         assert_eq!(*ptr, 42);
         *ptr = 43;
         assert_eq!(*ptr, 43);
@@ -87,20 +106,20 @@ mod tests {
     #[test]
     fn test_uptr_as_ref() {
         let mut data = 42;
-        let ptr = UPtr(std::ptr::addr_of_mut!(data));
+        let ptr = unsafe { UPtr::from_raw(std::ptr::addr_of_mut!(data))};
         assert_eq!(unsafe { ptr.as_ref() }.unwrap(), &42);
     }
 
     #[test]
     fn test_uptr_as_ref_mut() {
         let mut data = 42;
-        let mut ptr = UPtr(std::ptr::addr_of_mut!(data));
+        let mut ptr = unsafe { UPtr::from_raw(std::ptr::addr_of_mut!(data))};
         assert_eq!(unsafe { ptr.as_ref_mut() }.unwrap(), &mut 42);
     }
 
     #[test]
     fn test_uptr_null() {
-        let mut ptr: UPtr<i32> = UPtr(std::ptr::null_mut());
+        let mut ptr: UPtr<i32> = unsafe { UPtr::from_raw(std::ptr::null_mut())};
         assert!(unsafe { ptr.as_ref() }.is_err());
         assert!(unsafe { ptr.as_ref_mut() }.is_err());
     }

@@ -7,12 +7,13 @@ use std::sync::LazyLock;
 
 use dlopen2::wrapper::{Container, WrapperApi};
 
-use crate::errors::LVInteropError;
+use crate::errors::{LVInteropError, MgError};
 use crate::{
     errors::{InternalError, Result},
     memory::MagicCookie,
     types::LVStatusCode,
 };
+use crate::memory::UPtr;
 
 /// The path to the LabVIEW runtime library.
 /// Set as const, so we can swap this for different platforms if required.
@@ -44,7 +45,7 @@ pub(crate) type UHandleValue = usize;
 /// Represents as UPtr passed by value. Can't use the generic
 /// version from the memory module else since the functions
 /// aren't generic.
-pub(crate) type UPtrValue = usize;
+pub(crate) type UPtrValue = *mut c_void;
 
 static SYNC_API: LazyLock<Result<Container<SyncApi>>> = LazyLock::new(load_container);
 
@@ -66,6 +67,19 @@ static MEMORY_API: LazyLock<Result<Container<MemoryApi>>> = LazyLock::new(|| {
 
 pub fn memory_api() -> Result<&'static Container<MemoryApi>> {
     MEMORY_API.as_ref().map_err(|e| e.clone())
+}
+
+static COOKIE_API: LazyLock<Result<Container<CookieApi>>> = LazyLock::new(|| {
+    let result = load_container::<CookieApi>();
+
+    if let Err(e) = &result {
+        eprintln!("Failed to load LabVIEW Cookie API: {e}");
+    }
+    result
+});
+
+pub fn cookie_api() -> Result<&'static Container<CookieApi>> {
+    COOKIE_API.as_ref().map_err(|e| e.clone())
 }
 
 /// The LabVIEW synchronisation features are part of the Support Manager API.
@@ -140,6 +154,34 @@ pub struct MemoryApi {
     /// `DSNewHClr` is an alternative that also initialized the memory to zero.
     #[dlopen2_name = "DSNewHandle"]
     new_handle: unsafe extern "C" fn(size: usize) -> *mut *mut std::ffi::c_void,
+    
+    /// UPtr DSNewPtr(size);
+    /// 
+    /// Creates a new pointer to a non-relocatable block of memory of the specified size.
+    /// 
+    /// ```C
+    /// UPtr DSNewPtr(size_t size);
+    /// ```
+    /// 
+    /// - `size`: `size_t`, Size, in bytes, of the pointer you want to create.
+    /// 
+    /// Return Value
+    /// 
+    /// A pointer to a block of size bytes. If an error occurs, this function returns NULL.
+    #[dlopen2_name = "DSNewPtr"]
+    new_ptr: unsafe extern "C" fn(size: usize) -> UPtrValue,
+
+    /// Release the memory referenced by the specified pointer.
+    ///
+    /// ```C
+    /// MgErr DsDisposePtr(p)
+    /// ```
+    ///
+    /// - `p`: `UPtr` Pointer you wish to dispose of.
+    ///
+    /// Returns `MgErr`:  Either `noErr` or `mZoneErr`.
+    #[dlopen2_name = "DSDisposePtr"]
+    dispose_ptr: unsafe extern "C" fn(p: UPtrValue) -> LVStatusCode,
 
     /// Copies the data referenced by the handle hsrc into the handle pointed to by ph or a new handle if ph points to NULL.
     ///
@@ -243,4 +285,39 @@ pub struct MemoryApi {
         handle_ptr: *mut UHandleValue,
         total_new_size: usize,
     ) -> LVStatusCode,
+}
+
+pub type CookieJar = *mut *mut std::ffi::c_void;
+pub struct CookieInfo;
+pub type Bool32 = i32;
+// Cleanup modes enum
+#[repr(i32)]
+enum CleanupMode {
+    CleanRemove = 0,
+    CleanExit = 1,
+    CleanOnIdle = 2,
+    CleanAfterReset = 3,
+    CleanOnIdleIfNotTop = 4,
+    CleanAfterResetIfNotTop = 5,
+}
+type CleanupProcPtr = extern "C" fn(usize) -> i32;
+
+#[derive(WrapperApi)]
+pub struct CookieApi {
+    #[dlopen2_name = "MCNewBigJar"]
+    new_big_jar: unsafe extern "C" fn(item_size: i32) -> CookieJar,
+    #[dlopen2_name = "MCDisposeJar"]
+    dispose_jar: unsafe extern "C" fn(jar: CookieJar) -> MgError,
+    #[dlopen2_name = "MCNewCookie"]
+    new_cookie: unsafe extern "C" fn(jar: CookieJar, info: UPtrValue) -> MagicCookie,
+    #[dlopen2_name = "MCDisposeCookie"]
+    dispose_cookie: unsafe extern "C" fn(jar: CookieJar, cookie: MagicCookie, info: UPtrValue) -> LVStatusCode,
+    #[dlopen2_name = "MCGetCookieInfo"]
+    get_cookie_info: unsafe extern "C" fn(jar: CookieJar, cookie: MagicCookie, info: UPtrValue) -> LVStatusCode,
+    #[dlopen2_name = "MCGetCookieInfoPtr"]
+    get_cookie_info_ptr: unsafe extern "C" fn(jar: CookieJar, cookie: MagicCookie, info: *mut UPtrValue) -> LVStatusCode,
+    #[dlopen2_name = "MCIsACookie"]
+    is_a_cookie: unsafe extern "C" fn(jar: CookieJar, cookie: MagicCookie) -> Bool32,
+    #[dlopen2_name = "RTSetCleanupProc"]
+    rt_set_cleanup_proc: unsafe extern "C" fn(proc: CleanupProcPtr, data_uptr: UPtrValue, cleanup_mode: CleanupMode) -> LVStatusCode,
 }
