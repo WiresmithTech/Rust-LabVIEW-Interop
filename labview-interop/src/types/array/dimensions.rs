@@ -2,7 +2,7 @@ use crate::errors::{InternalError, LVInteropError};
 
 #[repr(transparent)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct LVArrayDims<const D: usize>([i32; D]);
+pub struct LVArrayDims<const D: usize>(pub(crate) [i32; D]);
 
 impl<const D: usize> LVArrayDims<D> {
     pub fn new_empty() -> Self {
