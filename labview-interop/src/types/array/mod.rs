@@ -46,7 +46,7 @@ impl<const D: usize, T> LVArray<D, T> {
         let mut dimensions = [0i32; D];
 
         for (index, value) in dimensions.iter_mut().enumerate() {
-            let element_ptr = std::ptr::addr_of!(self.dim_sizes.0[index]);
+            let element_ptr = std::ptr::addr_of!(self.dim_sizes.shape()[index]);
             // Safety: the indexes must be in range due to the const generic value.
             let dim_size = unsafe { std::ptr::read_unaligned(element_ptr) };
             *value = dim_size;
